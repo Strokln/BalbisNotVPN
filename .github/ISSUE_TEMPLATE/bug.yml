@@ -1,0 +1,32 @@
+name: Ошибка
+description: Сообщить о проблеме Balbis
+title: "[Ошибка] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Версия Balbis и macOS
+      placeholder: Balbis 0.7.1, macOS 13.7.8
+    validations:
+      required: true
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Процессор
+      options:
+        - Intel (x86_64)
+        - Apple Silicon (ARM64)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как воспроизвести
+      description: Что сделали, что ожидали и что произошло.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Диагностика
+      description: При обрывах приложите события из «Причины переподключений». Удалите личные сведения.

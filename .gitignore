@@ -1,0 +1,13 @@
+# Generated app bundles, test output, downloaded tools and binaries
+macos/build/
+macos/engine/bin/
+macos/tunnel/bin/
+**/tools/
+**/.cache/
+**/__pycache__/
+*.py[cod]
+.DS_Store
+.AppleDouble
+*.dmg
+*.zip
+*.dSYM/

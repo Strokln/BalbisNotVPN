@@ -1,0 +1,13 @@
+name: Идея
+description: Предложить улучшение Balbis
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую задачу нужно решить?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Как это должно работать?

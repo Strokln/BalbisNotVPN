@@ -1,0 +1,127 @@
+# User-provided foreign-exit routing rules, 2026-11-04.
+# Exact domains and all their subdomains. The rest of Google stays outside this route.
+# OpenAI / ChatGPT
+openai.com
+chatgpt.com
+oaistatic.com
+oaiusercontent.com
+sora.com
+# Anthropic / Claude
+anthropic.com
+claude.ai
+claude.com
+claudeusercontent.com
+# Google AI
+gemini.google.com
+aistudio.google.com
+makersuite.google.com
+notebooklm.google.com
+notebooklm.google
+labs.google
+deepmind.google
+generativelanguage.googleapis.com
+alkalimakersuite-pa.clients6.google.com
+proactivebackend-pa.googleapis.com
+geminiweb-pa.googleapis.com
+# Microsoft Copilot
+copilot.microsoft.com
+sydney.bing.com
+edgeservices.bing.com
+# Other AI services
+perplexity.ai
+x.ai
+grok.com
+mistral.ai
+poe.com
+character.ai
+huggingface.co
+hf.co
+openrouter.ai
+groq.com
+meta.ai
+midjourney.com
+ideogram.ai
+leonardo.ai
+stability.ai
+runwayml.com
+suno.com
+suno.ai
+elevenlabs.io
+udio.com
+kling.ai
+pika.art
+cursor.com
+cursor.sh
+cursorapi.com
+githubcopilot.com
+codeium.com
+windsurf.com
+v0.dev
+bolt.new
+lovable.dev
+replicate.com
+deepl.com
+notion.so
+notion.com
+figma.com
+canva.com
+# YouTube
+youtube.com
+youtu.be
+googlevideo.com
+ytimg.com
+ggpht.com
+youtube-nocookie.com
+youtubei.googleapis.com
+yt.be
+# Meta
+instagram.com
+cdninstagram.com
+facebook.com
+fbcdn.net
+fb.com
+fbsbx.com
+messenger.com
+threads.net
+threads.com
+# X / Twitter
+twitter.com
+x.com
+twimg.com
+t.co
+# Discord
+discord.com
+discord.gg
+discordapp.com
+discordapp.net
+discord.media
+discordcdn.com
+# Other services
+linkedin.com
+licdn.com
+medium.com
+patreon.com
+spotify.com
+scdn.co
+spotifycdn.com
+netflix.com
+nflxvideo.net
+nflximg.net
+signal.org
+viber.com
+proton.me
+protonmail.com
+torproject.org
+rutracker.org
+rutracker.cc
+soundcloud.com
+sndcdn.com
+quora.com
+jetbrains.com
+docker.com
+docker.io
+intel.com
+tiktok.com
+tiktokcdn.com
+nnmclub.to
+archive.org
