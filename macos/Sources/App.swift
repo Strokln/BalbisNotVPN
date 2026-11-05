@@ -50,7 +50,7 @@ final class PanelModel: ObservableObject {
          connectionProbe: @escaping (UInt16, UInt16, Bool) throws -> String = { port, foreignPort, background in
              if background {
                  try ConnectionHealth.transportAlive(port: port, foreignPort: foreignPort)
-                 return "Маршрут отвечает."
+                 return L("Маршрут отвечает.")
              }
              return try ConnectionHealth.check(port: port, foreignPort: foreignPort)
          }) {
@@ -74,9 +74,9 @@ final class PanelModel: ObservableObject {
                 service = services.contains("Wi-Fi") ? "Wi-Fi" : services.first ?? ""
             }
         } catch { diagnostics = error.localizedDescription }
-        if recoveryNeeded { message = "Нужно восстановить настройки предыдущего подключения." }
+        if recoveryNeeded { message = L("Нужно восстановить настройки предыдущего подключения.") }
         runtime.onProgress = { [weak self] _ in
-            DispatchQueue.main.async { self?.message = "Подбираем доступное подключение…" }
+            DispatchQueue.main.async { self?.message = L("Подбираем доступное подключение…") }
         }
         runtime.onUnexpectedExit = { [weak self] in
             DispatchQueue.main.async {
@@ -86,7 +86,7 @@ final class PanelModel: ObservableObject {
                 self.perform(recoveryOperation: true) {
                     try self.runtime.stop()
                 } completion: {
-                    self.message = "Соединение прервалось."
+                    self.message = L("Соединение прервалось.")
                     self.scheduleReconnect()
                 }
             }
@@ -160,15 +160,15 @@ final class PanelModel: ObservableObject {
         let selectedStrategy = Strategy(rawValue: strategy) ?? .balanced
         let options = ForeignOptions(enabled: foreign, youtube: youtube, region: ["AUTO", "EU", "AM"][region])
         problem = nil
-        message = stopping ? "Завершаем подключение…" : "Подбираем доступное подключение…"
+        message = stopping ? L("Завершаем подключение…") : L("Подбираем доступное подключение…")
         perform(recoveryOperation: true) {
             if stopping { try self.runtime.stop() }
             else {
                 if automatically {
                     let needsRecovery = FileManager.default.fileExists(atPath: journalURL.path)
                     if (selectedMode != 0 || needsRecovery) && !ProxyHelperClient.isReady() {
-                        throw UserFacingError(message: "Откройте Balbis и подключитесь вручную один раз, чтобы завершить настройку.",
-                                              details: "Для автоматического подключения служба должна быть установлена и готова.")
+                        throw UserFacingError(message: L("Откройте Balbis и подключитесь вручную один раз, чтобы завершить настройку."),
+                                              details: L("Для автоматического подключения служба должна быть установлена и готова."))
                     }
                     if needsRecovery { try recoverSnapshot() }
                 }
@@ -257,7 +257,7 @@ final class PanelModel: ObservableObject {
         let port = runtime.port
         let foreignPort = runtime.foreignHTTPPort
         checkingConnection = true
-        if !repair { checkResult = "Проверяем маршрут…" }
+        if !repair { checkResult = L("Проверяем маршрут…") }
         queue.async {
             var result = ""
             var failure: Error?
@@ -268,7 +268,7 @@ final class PanelModel: ObservableObject {
                 // Ignore a probe from the preceding connection or a user-requested transition.
                 guard !self.busy, self.connected, self.runtime.port == port else { return }
                 if !repair {
-                    self.checkResult = failure == nil ? result : "Проверка не удалась. Подробности доступны в диагностике."
+                    self.checkResult = failure == nil ? result : L("Проверка не удалась. Подробности доступны в диагностике.")
                     if failure == nil { self.recoveryNoticePolicy.reset(); self.notices.clear() }
                 }
                 if let error = failure { self.diagnostics = error.localizedDescription }
@@ -293,7 +293,7 @@ final class PanelModel: ObservableObject {
         guard automaticRecovery, !quitting, retryTask == nil, let delay = reconnectPolicy.nextDelay() else { return }
         retryTask?.cancel()
         waitingForNetwork = true
-        message = "Повторим подключение через \(Int(delay)) сек."
+        message = L("Повторим подключение через %d сек.", Int(delay))
         let task = DispatchWorkItem { [weak self] in
             guard let self = self, self.reconnectPolicy.wanted, self.automaticRecovery, !self.quitting else { return }
             self.retryTask = nil
@@ -312,13 +312,13 @@ final class PanelModel: ObservableObject {
         let selectedService = service
         let selectedStrategy = Strategy(rawValue: strategy) ?? .balanced
         let options = ForeignOptions(enabled: foreign, youtube: youtube, region: ["AUTO", "EU", "AM"][region])
-        message = "Восстанавливаем подключение…"
+        message = L("Восстанавливаем подключение…")
         perform(recoveryOperation: true) {
             try self.runtime.stop()
             guard let resources = Bundle.main.resourceURL, let executable = Bundle.main.executablePath else { throw BalbisError("Повреждён пакет приложения.") }
             try self.runtime.start(strategy: selectedStrategy, mode: selectedMode, service: selectedService, resources: resources, executable: executable, foreign: options)
         } completion: {
-            self.message = "Соединение восстановлено."
+            self.message = L("Соединение восстановлено.")
             self.connectionRecovered()
         }
     }
@@ -334,7 +334,7 @@ final class PanelModel: ObservableObject {
         let selectedStrategy = Strategy(rawValue: strategy) ?? .balanced
         let video = youtube
         let useForeign = foreign
-        message = "Меняем страну…"
+        message = L("Меняем страну…")
         perform(recoveryOperation: true) {
             guard let resources = Bundle.main.resourceURL, let executable = Bundle.main.executablePath else { throw BalbisError("Повреждён пакет приложения.") }
             try self.runtime.stop()
@@ -345,9 +345,9 @@ final class PanelModel: ObservableObject {
                 let failure = error
                 try self.runtime.stop()
                 try self.runtime.start(strategy: selectedStrategy, mode: selectedMode, service: selectedService, resources: resources, executable: executable, foreign: ForeignOptions(enabled: useForeign, youtube: video, region: ["AUTO", "EU", "AM"][previous]))
-                throw UserFacingError(message: "Новая страна недоступна. Прежнее подключение восстановлено.", details: failure.localizedDescription)
+                throw UserFacingError(message: L("Новая страна недоступна. Прежнее подключение восстановлено."), details: failure.localizedDescription)
             }
-        } completion: { self.message = "Страна изменена."; self.connectionRecovered() }
+        } completion: { self.message = L("Страна изменена."); self.connectionRecovered() }
     }
     private func connectionRecovered() {
         problem = nil
@@ -376,15 +376,15 @@ final class PanelModel: ObservableObject {
         cancelStartupConnection()
     }
     func recover() {
-        message = "Восстанавливаем настройки…"
+        message = L("Восстанавливаем настройки…")
         perform { try recoverSnapshot() } completion: {
-            self.message = "Настройки восстановлены. Можно подключаться."
+            self.message = L("Настройки восстановлены. Можно подключаться.")
         }
     }
     func removeHelper() {
-        message = "Удаляем службу подключения…"
+        message = L("Удаляем службу подключения…")
         perform { try ProxyHelperClient.uninstall() } completion: {
-            self.message = "Служба удалена. При следующем подключении потребуется разрешение."
+            self.message = L("Служба удалена. При следующем подключении потребуется разрешение.")
         }
     }
     func copyDiagnostics() {
@@ -449,18 +449,21 @@ struct BalbisPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            header.layoutPriority(1)
             if model.settings {
                 settingsPage
             } else {
-                ScrollView { homePage.padding(.top, 10).padding(.bottom, 24) }
-                    .scrollIndicators(.hidden).modifier(GlassScrollEdges())
+                ViewThatFits(in: .vertical) {
+                    homePage.padding(.top, 10).fixedSize(horizontal: false, vertical: true)
+                    ScrollView { homePage.padding(.top, 10).padding(.bottom, 24) }
+                        .scrollIndicators(.hidden).modifier(GlassScrollEdges())
+                }.frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
             }
             Spacer(minLength: 0)
-            footer
+            footer.layoutPriority(1)
         }
         .padding(20)
-        .frame(width: 360, height: 560)
+        .frame(width: 360, height: 640)
         .background {
             ZStack(alignment: .topTrailing) {
                 GlassBackground()
@@ -489,7 +492,7 @@ struct BalbisPanel: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("Balbis").font(.system(size: 19, weight: .semibold, design: .rounded))
-                Text(model.settings ? "Настройки" : "Свободнее в сети").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(model.settings ? L("Настройки") : L("Свободнее в сети")).font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
             Button {
@@ -498,9 +501,9 @@ struct BalbisPanel: View {
                 Image(systemName: model.settings ? "xmark" : "slider.horizontal.3")
                     .font(.system(size: 13, weight: .medium)).frame(width: 32, height: 32)
                     .background(.white.opacity(0.08), in: Circle())
-            }.buttonStyle(.plain).keyboardShortcut(",", modifiers: .command).help(model.settings ? "Назад" : "Настройки")
-                .accessibilityLabel(model.settings ? "Вернуться к подключению" : "Настройки")
-        }.padding(.bottom, 22)
+            }.buttonStyle(.plain).keyboardShortcut(",", modifiers: .command).help(model.settings ? L("Назад") : L("Настройки"))
+                .accessibilityLabel(model.settings ? L("Вернуться к подключению") : L("Настройки"))
+        }.frame(height: 38).padding(.bottom, 22)
     }
     private var homePage: some View {
         VStack(spacing: 18) {
@@ -509,11 +512,11 @@ struct BalbisPanel: View {
                 powerButton
                 HStack(spacing: 6) {
                     Circle().fill(model.busy ? Color.orange : accent).frame(width: 5, height: 5)
-                    Text(model.waitingForNetwork ? "Ждём подключения к сети" : model.busy ? "Подождите немного" : model.connected ? "Подключено" : "Готов к подключению")
+                    Text(model.waitingForNetwork ? L("Ждём подключения к сети") : model.busy ? L("Подождите немного") : model.connected ? L("Подключено") : L("Готов к подключению"))
                         .font(.system(size: 14, weight: .medium))
                         .accessibilityIdentifier("balbis.connection.status")
                 }
-                Text(model.waitingForNetwork ? "Balbis подключится, когда сеть будет готова" : model.connected ? "Можно открывать любимые сервисы" : "Любимые сервисы — в одном нажатии")
+                Text(model.waitingForNetwork ? L("Balbis подключится, когда сеть будет готова") : model.connected ? L("Можно открывать любимые сервисы") : L("Любимые сервисы — в одном нажатии"))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }.padding(.vertical, 6)
 
@@ -522,24 +525,24 @@ struct BalbisPanel: View {
             }
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 3) {
-                    routeButton("Избранное", value: 1)
-                    routeButton("Все сайты", value: 2)
-                    if model.mode == 0 { routeButton("Вручную", value: 0) }
+                    routeButton(L("Избранное"), value: 1)
+                    routeButton(L("Все сайты"), value: 2)
+                    if model.mode == 0 { routeButton(L("Вручную"), value: 0) }
                 }.padding(3).background(.black.opacity(0.14), in: Capsule())
-                Text(model.mode == 2 ? "Все сайты используют подключение Balbis." :
-                     model.mode == 0 ? "Для приложений с ручной настройкой подключения." :
-                     "Нейросети, YouTube и другие сервисы из списка.")
+                Text(model.mode == 2 ? L("Все сайты используют подключение Balbis.") :
+                     model.mode == 0 ? L("Для приложений с ручной настройкой подключения.") :
+                     L("Нейросети, YouTube и другие сервисы из списка."))
                     .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }.modifier(GlassCard()).disabled(model.busy || model.connected)
 
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
-                    Text("YouTube через Balbis").font(.system(size: 13, weight: .medium))
+                    Text(L("YouTube через Balbis")).font(.system(size: 13, weight: .medium))
                     Spacer()
-                    Toggle("YouTube через Balbis", isOn: $model.youtube).labelsHidden()
+                    Toggle(L("YouTube через Balbis"), isOn: $model.youtube).labelsHidden()
                         .toggleStyle(.switch).controlSize(.small)
                 }
-                Text("Включите, если видео не загружаются.")
+                Text(L("Включите, если видео не загружаются."))
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }.modifier(GlassCard()).disabled(model.busy || model.connected || !model.foreign)
 
@@ -553,7 +556,7 @@ struct BalbisPanel: View {
                 .background(.white.opacity(model.mode == value ? 0.14 : 0), in: Capsule())
                 .overlay(Capsule().strokeBorder(.white.opacity(model.mode == value ? 0.15 : 0)))
                 .contentShape(Capsule())
-        }.buttonStyle(.plain).accessibilityValue(model.mode == value ? "Выбрано" : "")
+        }.buttonStyle(.plain).accessibilityValue(model.mode == value ? L("Выбрано") : "")
     }
     private var powerButton: some View {
         Button(action: model.toggle) {
@@ -570,46 +573,46 @@ struct BalbisPanel: View {
                     }
                 }.frame(width: 102, height: 102)
                     .shadow(color: accent.opacity(0.16), radius: 24, y: 6)
-                Text(model.waitingForNetwork ? "Отменить" : model.busy ? "Подождите…" : model.connected ? "Отключить" : "Подключить")
+                Text(model.waitingForNetwork ? L("Отменить") : model.busy ? L("Подождите…") : model.connected ? L("Отключить") : L("Подключить"))
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
             }.frame(maxWidth: .infinity).contentShape(Rectangle())
         }.buttonStyle(.plain).disabled(model.busy)
             .keyboardShortcut(.return, modifiers: .command)
-            .accessibilityLabel(model.waitingForNetwork ? "Отменить автоматическое подключение" : model.connected ? "Отключить Balbis" : "Подключить Balbis")
+            .accessibilityLabel(model.waitingForNetwork ? L("Отменить автоматическое подключение") : model.connected ? L("Отключить Balbis") : L("Подключить Balbis"))
     }
     private var notice: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(model.message.isEmpty ? "Восстановите настройки предыдущего подключения." : model.message)
+            Text(model.message.isEmpty ? L("Восстановите настройки предыдущего подключения.") : model.message)
                 .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
             if let problem = model.problem {
                 switch problem.action {
-                case .retry: Button("Повторить", action: model.retryNow).disabled(model.busy)
-                case .settings: Button("Открыть настройки") { model.settings = true }
-                case .network: Button("Открыть настройки сети") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.network")!) }
+                case .retry: Button(L("Повторить"), action: model.retryNow).disabled(model.busy)
+                case .settings: Button(L("Открыть настройки")) { model.settings = true }
+                case .network: Button(L("Открыть настройки сети")) { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.network")!) }
                 }
             }
             if model.recoveryNeeded && !model.connected {
-                Button("Восстановить подключение", action: model.recover).disabled(model.busy)
+                Button(L("Восстановить подключение"), action: model.recover).disabled(model.busy)
             }
         }.frame(maxWidth: .infinity, alignment: .leading).modifier(GlassCard())
     }
     private var startupSettings: some View {
         VStack(alignment: .leading, spacing: 13) {
-            Text("При запуске").font(.system(size: 13, weight: .semibold))
-            Toggle("Запускать вместе с macOS", isOn: Binding(
+            Text(L("При запуске")).font(.system(size: 13, weight: .semibold))
+            Toggle(L("Запускать вместе с macOS"), isOn: Binding(
                 get: { model.loginItemState == .enabled || model.loginItemState == .requiresApproval },
                 set: { model.setLaunchAtLogin($0) }
             )).toggleStyle(.switch).controlSize(.small).disabled(model.loginItemBusy)
             if model.loginItemState == .requiresApproval {
-                Text("Разрешите автозапуск в настройках macOS.").font(.system(size: 11)).foregroundStyle(.secondary)
-                Button("Открыть настройки macOS", action: model.openLoginSettings).buttonStyle(.link)
+                Text(L("Разрешите автозапуск в настройках macOS.")).font(.system(size: 11)).foregroundStyle(.secondary)
+                Button(L("Открыть настройки macOS"), action: model.openLoginSettings).buttonStyle(.link)
             }
             if !model.loginItemMessage.isEmpty {
                 Text(model.loginItemMessage).font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Divider().opacity(0.35)
-            Toggle("Подключаться автоматически", isOn: $model.autoConnect).toggleStyle(.switch).controlSize(.small)
-            Text("При открытии Balbis, когда появится сеть.")
+            Toggle(L("Подключаться автоматически"), isOn: $model.autoConnect).toggleStyle(.switch).controlSize(.small)
+            Text(L("При открытии Balbis, когда появится сеть."))
                 .font(.system(size: 11)).foregroundStyle(.secondary)
         }.font(.system(size: 12)).modifier(GlassCard())
     }
@@ -618,75 +621,75 @@ struct BalbisPanel: View {
             VStack(alignment: .leading, spacing: 16) {
                 Group {
                 startupSettings
-                DisclosureGroup("Обновления и клавиатура") {
+                DisclosureGroup(L("Обновления и клавиатура")) {
                 VStack(alignment: .leading, spacing: 12) {
                 UpdateSettingsView(updates: model.updates)
                 Divider().opacity(0.35)
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("Клавиатура").font(.system(size: 13, weight: .semibold))
-                    Text(model.shortcutAvailable ? "⇧⌘B — открыть Balbis из любого приложения" : "⇧⌘B недоступно: сочетание занято другой программой.")
-                    Text("⌘Return — подключить или отключить · ⌘, — настройки · Esc — назад или закрыть")
-                    Text("Для перехода по всем элементам включите навигацию клавиатурой в настройках macOS.").foregroundStyle(.secondary)
+                    Text(L("Клавиатура")).font(.system(size: 13, weight: .semibold))
+                    Text(model.shortcutAvailable ? L("⇧⌘B — открыть Balbis из любого приложения") : L("⇧⌘B недоступно: сочетание занято другой программой."))
+                    Text(L("⌘Return — подключить или отключить · ⌘, — настройки · Esc — назад или закрыть"))
+                    Text(L("Для перехода по всем элементам включите навигацию клавиатурой в настройках macOS.")).foregroundStyle(.secondary)
                 }.font(.system(size: 11))
                 }.padding(.top, 10)
                 }.font(.system(size: 12)).modifier(GlassCard())
                 }
                 VStack(alignment: .leading, spacing: 12) {
-                    Button(model.checkingConnection ? "Проверяем…" : "Проверить подключение") { model.checkConnection() }.disabled(model.busy || model.checkingConnection || !model.connected)
+                    Button(model.checkingConnection ? L("Проверяем…") : L("Проверить подключение")) { model.checkConnection() }.disabled(model.busy || model.checkingConnection || !model.connected)
                     if !model.checkResult.isEmpty { Text(model.checkResult).font(.system(size: 11)).textSelection(.enabled) }
-                    Toggle("Восстанавливать при обрыве", isOn: $model.automaticRecovery).toggleStyle(.switch).controlSize(.small)
+                    Toggle(L("Восстанавливать при обрыве"), isOn: $model.automaticRecovery).toggleStyle(.switch).controlSize(.small)
                 }.modifier(GlassCard())
                 ConnectionNoticeSettingsView(notices: model.notices).modifier(GlassCard())
                 CustomSitesView().modifier(GlassCard())
                 ExcludedSitesView().modifier(GlassCard())
                 BuiltInSitesView().modifier(GlassCard())
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Подключение").font(.system(size: 13, weight: .semibold))
-                    Picker("Страна", selection: Binding(get: { model.region }, set: { model.changeRegion($0) })) {
-                        Text("Автоматически").tag(0)
-                        Text("Европа").tag(1)
-                        Text("США").tag(2)
+                    Text(L("Подключение")).font(.system(size: 13, weight: .semibold))
+                    Picker(L("Страна"), selection: Binding(get: { model.region }, set: { model.changeRegion($0) })) {
+                        Text(L("Автоматически")).tag(0)
+                        Text(L("Европа")).tag(1)
+                        Text(L("США")).tag(2)
                     }
                     .disabled(model.busy)
-                    Toggle("Зарубежное подключение", isOn: $model.foreign).toggleStyle(.switch).controlSize(.small).disabled(model.busy || model.connected)
-                    Text("Нужно для сервисов, недоступных в вашей стране.")
+                    Toggle(L("Зарубежное подключение"), isOn: $model.foreign).toggleStyle(.switch).controlSize(.small).disabled(model.busy || model.connected)
+                    Text(L("Нужно для сервисов, недоступных в вашей стране."))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
-                    if model.connected { Text("Страну можно менять с автоматическим переподключением.").font(.system(size: 11)).foregroundStyle(.secondary) }
+                    if model.connected { Text(L("Страну можно менять с автоматическим переподключением.")).font(.system(size: 11)).foregroundStyle(.secondary) }
                 }.modifier(GlassCard())
 
-                DisclosureGroup("Дополнительно") {
+                DisclosureGroup(L("Дополнительно")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Picker("Режим", selection: $model.mode) {
-                            Text("Избранные сервисы").tag(1)
-                            Text("Все сайты").tag(2)
-                            Text("Ручная настройка").tag(0)
+                        Picker(L("Режим"), selection: $model.mode) {
+                            Text(L("Избранные сервисы")).tag(1)
+                            Text(L("Все сайты")).tag(2)
+                            Text(L("Ручная настройка")).tag(0)
                         }
-                        Picker("Способ обхода", selection: $model.strategy) {
-                            Text("Универсальный").tag(0)
-                            Text("Альтернативный").tag(1)
-                            Text("Для защищённых сайтов").tag(2)
+                        Picker(L("Способ обхода"), selection: $model.strategy) {
+                            Text(L("Универсальный")).tag(0)
+                            Text(L("Альтернативный")).tag(1)
+                            Text(L("Для защищённых сайтов")).tag(2)
                         }
-                        Text("Попробуйте другой способ, если сайты не открываются.")
+                        Text(L("Попробуйте другой способ, если сайты не открываются."))
                             .font(.system(size: 11)).foregroundStyle(.secondary)
-                        Picker("Сеть", selection: $model.service) {
+                        Picker(L("Сеть"), selection: $model.service) {
                             ForEach(model.services, id: \.self) { Text($0).tag($0) }
                         }.disabled(model.mode == 0)
                     }.padding(.top, 12).disabled(model.busy || model.connected)
                 }.font(.system(size: 12)).modifier(GlassCard())
 
-                DisclosureGroup("Диагностика") {
+                DisclosureGroup(L("Диагностика")) {
                     VStack(alignment: .leading, spacing: 10) {
                         if !model.diagnostics.isEmpty {
                             Text(model.diagnostics).font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
                         }
-                        Button("Скопировать сведения", action: model.copyDiagnostics).disabled(model.diagnostics.isEmpty)
-                        Button("Открыть журнал", action: model.openLog)
-                        Button("Причины переподключений") {
+                        Button(L("Скопировать сведения"), action: model.copyDiagnostics).disabled(model.diagnostics.isEmpty)
+                        Button(L("Открыть журнал"), action: model.openLog)
+                        Button(L("Причины переподключений")) {
                             NSWorkspace.shared.open(supportDirectory.appendingPathComponent("connection-events.log"))
                         }
-                        Button("Удалить службу подключения", action: model.removeHelper)
+                        Button(L("Удалить службу подключения"), action: model.removeHelper)
                             .disabled(model.busy || model.connected || model.recoveryNeeded)
-                        Button("Восстановить настройки", action: model.recover).disabled(model.busy || model.connected || !model.recoveryNeeded)
+                        Button(L("Восстановить настройки"), action: model.recover).disabled(model.busy || model.connected || !model.recoveryNeeded)
                         DiagnosticReportView(snapshot: DiagnosticSnapshot(
                             connected: model.connected,
                             mode: ["Ручная настройка", "Избранное", "Все сайты"][max(0, min(2, model.mode))],
@@ -697,18 +700,18 @@ struct BalbisPanel: View {
                         ))
                     }.padding(.top, 10)
                 }.font(.system(size: 12)).modifier(GlassCard())
-                Button("Открыть инструкцию", action: model.openHelp).buttonStyle(.link).font(.system(size: 12))
+                Button(L("Открыть инструкцию"), action: model.openHelp).buttonStyle(.link).font(.system(size: 12))
             }.padding(.top, 10).padding(.bottom, 24)
-        }.frame(maxHeight: .infinity).modifier(GlassScrollEdges())
+        }.frame(minHeight: 0, maxHeight: .infinity).modifier(GlassScrollEdges())
     }
     private var footer: some View {
         HStack {
             Text("Balbis by Strokin").font(.system(size: 10, weight: .medium)).foregroundStyle(.tertiary)
             Spacer()
             if model.settings {
-                Text("0.9.0").font(.system(size: 10)).foregroundStyle(.tertiary)
+                Text("0.10.0").font(.system(size: 10)).foregroundStyle(.tertiary)
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").font(.system(size: 12)) }
-                    .buttonStyle(.plain).help("Завершить Balbis").disabled(model.busy)
+                    .buttonStyle(.plain).help(L("Завершить Balbis")).disabled(model.busy)
             } else {
                 Image(systemName: "lock.shield").font(.system(size: 11)).foregroundStyle(.secondary)
             }
@@ -730,7 +733,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let controller = NSHostingController(rootView: BalbisPanel(model: model))
         controller.view.appearance = NSAppearance(named: .darkAqua)
         popover.contentViewController = controller
-        popover.contentSize = NSSize(width: 360, height: 560)
+        popover.contentSize = NSSize(width: 360, height: 640)
         popover.behavior = .transient
         popover.delegate = self
         popover.animates = true
@@ -765,7 +768,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let symbol = model.connected ? "shield.lefthalf.filled" : "shield"
         statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Balbis")
         statusItem.button?.image?.isTemplate = true
-        statusItem.button?.toolTip = model.connected ? "Balbis · Подключено" : "Balbis · Отключено"
+        statusItem.button?.toolTip = model.connected ? L("Balbis · Подключено") : L("Balbis · Отключено")
     }
     @objc private func togglePanel() {
         if popover.isShown { popover.performClose(nil) } else { showPanel() }
@@ -794,7 +797,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                     self.model.quitting = false
                     self.model.busy = false
                     self.model.diagnostics = error.localizedDescription
-                    self.model.message = "Не удалось восстановить настройки. Повторите выход."
+                    self.model.message = L("Не удалось восстановить настройки. Повторите выход.")
                     self.showPanel()
                     sender.reply(toApplicationShouldTerminate: false)
                 } else { sender.reply(toApplicationShouldTerminate: true) }

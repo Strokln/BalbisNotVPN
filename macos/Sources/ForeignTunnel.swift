@@ -49,7 +49,7 @@ struct ForeignProbe {
     static func parseTrace(_ body: String) throws -> String {
         let loc = body.components(separatedBy: .newlines).first { $0.hasPrefix("loc=") }.map { String($0.dropFirst(4)) } ?? ""
         guard loc.utf8.count == 2, loc.utf8.allSatisfy({ (65...90).contains($0) }) else { throw BalbisError("Не удалось определить страну выхода туннеля.") }
-        guard !["RU", "BY", "IR", "KP", "SY", "CU"].contains(loc) else { throw BalbisError("Узел туннеля вернул неподходящую страну выхода: \(loc).") }
+        guard !["RU", "BY", "IR", "KP", "SY", "CU"].contains(loc) else { throw BalbisError("Узел туннеля вернул неподходящую страну выхода: %@.", loc) }
         return loc
     }
     static func classifyAPI(status: Int, body: String) -> String {
@@ -66,7 +66,7 @@ struct ForeignProbe {
     static func verify(httpPort: UInt16, socksPort: UInt16, directDomains: [String] = [], probeAPI: Bool = true) throws -> ForeignProbe {
         // Both probes explicitly use Balbis's local listeners, independent of system VPN/proxies.
         let trace = try command("/usr/bin/curl", ["-q", "--proxy", "http://127.0.0.1:\(httpPort)", "--noproxy", "", "--connect-timeout", "5", "--max-time", "12", "--max-filesize", "65536", "--fail", "--silent", "--show-error", "https://www.cloudflare.com/cdn-cgi/trace"])
-        guard trace.status == 0 else { throw BalbisError("Зарубежный туннель не передаёт HTTPS. Попробуйте другой регион. " + String(trace.output.prefix(200))) }
+        guard trace.status == 0 else { throw BalbisError("Зарубежный туннель не передаёт HTTPS. Попробуйте другой регион. %@", String(trace.output.prefix(200))) }
         let country = try parseTrace(trace.output)
         // An explicit exclusion intentionally bypasses the foreign API route. Do not
         // reject that session because a direct request has a different region.
@@ -77,7 +77,7 @@ struct ForeignProbe {
         let api = try command("/usr/bin/curl", ["-q", "--proxy", "socks5h://127.0.0.1:\(socksPort)", "--noproxy", "", "--connect-timeout", "5", "--max-time", "10", "--max-filesize", "65536", "--silent", "--show-error", "--write-out", "\n%{http_code}", "https://api.openai.com/v1/models"])
         let lines = api.output.components(separatedBy: .newlines)
         let classification = api.status == 0 ? classifyAPI(status: Int(lines.last ?? "") ?? 0, body: lines.dropLast().joined(separator: "\n")) : "unknown"
-        guard classification != "blocked" else { throw BalbisError("Узел \(country) доступен, но OpenAI отклоняет его регион. Попробуйте другой регион.") }
+        guard classification != "blocked" else { throw BalbisError("Узел %@ доступен, но OpenAI отклоняет его регион. Попробуйте другой регион.", country) }
         return ForeignProbe(country: country, aiRegion: classification)
     }
 }

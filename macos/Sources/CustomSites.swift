@@ -10,14 +10,14 @@ final class CustomSitesStore: ObservableObject {
             if FileManager.default.fileExists(atPath: file.path) {
                 domains = try Self.read(file: file)
             }
-        } catch { self.error = "Не удалось прочитать список сайтов." }
+        } catch { self.error = L("Не удалось прочитать список сайтов.") }
     }
     func add(_ input: String) {
         let domain = input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard DomainRules.parse(domain) == [domain], domain.contains("."), !domain.contains("#"),
               domain.range(of: "^[0-9.]+$", options: .regularExpression) == nil,
               !domain.hasSuffix(".local") else {
-            error = "Введите домен, например example.com, без ссылки и пути."
+            error = L("Введите домен, например example.com, без ссылки и пути.")
             return
         }
         save(Array(Set(domains + [domain])).sorted())
@@ -30,7 +30,7 @@ final class CustomSitesStore: ObservableObject {
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
             domains = values
             error = ""
-        } catch { self.error = "Не удалось сохранить список сайтов." }
+        } catch { self.error = L("Не удалось сохранить список сайтов.") }
     }
     static func load() throws -> [String] {
         let file = supportDirectory.appendingPathComponent("custom-sites.json")
@@ -50,19 +50,19 @@ struct CustomSitesView: View {
     @StateObject private var store = CustomSitesStore()
     @State private var entry = ""
     var body: some View {
-        DisclosureGroup("Мои сайты") {
+        DisclosureGroup(L("Мои сайты")) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Добавленные сайты идут через зарубежный выход. Изменения применятся при следующем подключении.")
+                Text(L("Добавленные сайты идут через зарубежный выход. Изменения применятся при следующем подключении."))
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                 HStack {
                     TextField("example.com", text: $entry)
-                    Button("Добавить") { store.add(entry); if store.error.isEmpty { entry = "" } }
+                    Button(L("Добавить")) { store.add(entry); if store.error.isEmpty { entry = "" } }
                 }
                 ForEach(store.domains, id: \.self) { domain in
                     HStack {
                         Text(domain).lineLimit(1)
                         Spacer()
-                        Button { store.remove(domain) } label: { Image(systemName: "minus.circle") }.buttonStyle(.plain).accessibilityLabel("Удалить " + domain)
+                        Button { store.remove(domain) } label: { Image(systemName: "minus.circle") }.buttonStyle(.plain).accessibilityLabel(L("Удалить ") + domain)
                     }
                 }
                 if !store.error.isEmpty { Text(store.error).font(.system(size: 11)).foregroundStyle(.orange) }

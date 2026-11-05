@@ -3,8 +3,17 @@ import Darwin
 
 struct BalbisError: LocalizedError {
     let message: String
-    init(_ message: String) { self.message = message }
-    var errorDescription: String? { message }
+    private let key: String
+    private let arguments: [CVarArg]
+    init(_ key: String, _ arguments: CVarArg...) {
+        self.key = key
+        self.arguments = arguments
+        self.message = arguments.isEmpty ? key : String(format: key, locale: Locale(identifier: "ru"), arguments: arguments)
+    }
+    var errorDescription: String? {
+        let format = NSLocalizedString(key, comment: "")
+        return arguments.isEmpty ? format : String(format: format, locale: Locale.current, arguments: arguments)
+    }
 }
 
 struct UserFacingError: LocalizedError {
@@ -67,7 +76,7 @@ struct SystemNetworkSettings: NetworkSettings {
         // Only fixed networksetup commands and separately shell-quoted arguments enter the script.
         let script = "set -e\n" + commands.map { "/usr/sbin/networksetup " + $0.map(shellQuote).joined(separator: " ") }.joined(separator: "\n")
         let result = try command("/usr/bin/osascript", ["-e", "do shell script " + appleQuote(script) + " with administrator privileges"])
-        guard result.status == 0, !result.output.contains("Error:") else { throw BalbisError("Не удалось изменить настройки прокси. " + result.output) }
+        guard result.status == 0, !result.output.contains("Error:") else { throw BalbisError("Не удалось изменить настройки прокси. %@", result.output) }
     }
 }
 

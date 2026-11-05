@@ -11,25 +11,30 @@
 
 Balbis 帮助访问指定网站。点击菜单栏中的盾牌，连接后即可继续使用。面板提供国家选择、自定义网站、登录时启动和连接恢复功能。
 
-运行已编译的应用无需 Homebrew、Python、Go 或驱动程序。界面目前为俄语，各语言 README 说明的操作相同。下文保留俄语界面名称，并附中文解释。
+运行已编译的应用无需 Homebrew、Python、Go 或驱动程序。界面支持俄语、英语、乌克兰语和简体中文，并自动遵循 macOS 的语言偏好。本指南也保留俄语原始菜单名称及中文说明。
 
 
 **0.9.0** 新增连接前自动比较境外区域、域名搜索和分类、域名开关和删除撤销、启动时检查 GitHub 稳定版更新，以及提供操作建议的连接错误提示。⇧⌘B 打开 Balbis，⌘Return 切换连接，⌘, 打开设置，Esc 返回或关闭面板。可以在设置中关闭更新检查；更新需要手动安装。
+
+
+**0.10.0** 新增俄语、英语、乌克兰语和简体中文界面。语言自动遵循 macOS 偏好设置，也支持为 Balbis 单独设置应用语言。界面、通知、错误信息和诊断报告标签已本地化；技术标识符和日志保持原有格式。
+
+面板高度增至 640 点，正常主屏幕无需滚动即可完整显示。
 
 ## 下载
 
 **[最新版本与校验和](https://github.com/Strokln/BalbisNotVPN/releases/latest)**
 
-当前磁盘映像版本为 **0.9.0**。
+当前磁盘映像版本为 **0.10.0**。
 
 | 你的 Mac | 应下载的映像 |
 | --- | --- |
-| Apple Silicon | [Balbis-0.9.0-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/Balbis-0.9.0-macOS-arm64.dmg) |
-| Intel | [Balbis-0.9.0-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/Balbis-0.9.0-macOS-x86_64.dmg) |
+| Apple Silicon | [Balbis-0.10.0-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.10.0/Balbis-0.10.0-macOS-arm64.dmg) |
+| Intel | [Balbis-0.10.0-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.10.0/Balbis-0.10.0-macOS-x86_64.dmg) |
 
 要确认处理器，请打开 Apple 菜单 →“关于本机”。显示 Apple 芯片的机型使用 Apple Silicon 版本，显示 Intel 处理器的机型使用 Intel 版本。更多说明见 [Apple 官方支持](https://support.apple.com/en-us/116943)。
 
-每个 DMG 都包含 **Balbis.app** 和“**应用程序**”文件夹的链接。**[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/SHA256SUMS.txt)** 包含两个映像的校验和。
+每个 DMG 都包含 **Balbis.app** 和“**应用程序**”文件夹的链接。**[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.10.0/SHA256SUMS.txt)** 包含两个映像的校验和。
 
 <details>
 <summary>验证下载的映像</summary>
@@ -37,7 +42,7 @@ Balbis 帮助访问指定网站。点击菜单栏中的盾牌，连接后即可�
 将同一版本的 DMG 和 SHA256SUMS.txt 下载到同一个文件夹。在终端中进入该文件夹，例如对 Intel 版本执行以下命令。
 
 ```sh
-shasum -a 256 Balbis-0.9.0-macOS-x86_64.dmg
+shasum -a 256 Balbis-0.10.0-macOS-x86_64.dmg
 ```
 
 将输出的哈希值与 SHA256SUMS.txt 中对应文件的记录进行比较。Apple Silicon 版本请使用带 `arm64` 的文件名。如果下载了两个映像，可以一起验证。

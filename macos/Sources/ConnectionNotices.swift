@@ -26,8 +26,8 @@ final class ConnectionNotices: NSObject, ObservableObject, UNUserNotificationCen
 
     func configure() {
         center.delegate = self
-        let retry = UNNotificationAction(identifier: "retry", title: "Повторить", options: [.foreground])
-        let settings = UNNotificationAction(identifier: "settings", title: "Открыть настройки", options: [.foreground])
+        let retry = UNNotificationAction(identifier: "retry", title: L("Повторить"), options: [.foreground])
+        let settings = UNNotificationAction(identifier: "settings", title: L("Открыть настройки"), options: [.foreground])
         center.setNotificationCategories([UNNotificationCategory(identifier: "connectionProblem", actions: [retry, settings], intentIdentifiers: [])])
     }
 
@@ -71,15 +71,15 @@ final class ConnectionNotices: NSObject, ObservableObject, UNUserNotificationCen
             guard generation == self.authorizationGeneration else { return }
             self.enabled = allowed
             self.requesting = false
-            self.status = allowed ? "" : "Разрешите уведомления Balbis в системных настройках macOS → Уведомления."
+            self.status = allowed ? "" : L("Разрешите уведомления Balbis в системных настройках macOS → Уведомления.")
             UserDefaults.standard.set(allowed, forKey: "connectionNotices")
         }
     }
     func showProblem() {
         guard enabled else { return }
         let content = UNMutableNotificationContent()
-        content.title = "Balbis не удалось восстановить соединение"
-        content.body = "Несколько попыток не удались. Balbis продолжает восстановление. Можно повторить сейчас или открыть настройки."
+        content.title = L("Balbis не удалось восстановить соединение")
+        content.body = L("Несколько попыток не удались. Balbis продолжает восстановление. Можно повторить сейчас или открыть настройки.")
         content.categoryIdentifier = "connectionProblem"
         content.sound = .default
         center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil)) { error in
@@ -110,9 +110,9 @@ struct ConnectionNoticeSettingsView: View {
     @ObservedObject var notices: ConnectionNotices
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Toggle("Уведомлять о сбоях", isOn: Binding(get: { notices.enabled }, set: { notices.setEnabled($0) }))
+            Toggle(L("Уведомлять о сбоях"), isOn: Binding(get: { notices.enabled }, set: { notices.setEnabled($0) }))
                 .toggleStyle(.switch).controlSize(.small).disabled(notices.requesting)
-            Text("После нескольких неудачных попыток восстановления. Повторные уведомления появятся только после нового обрыва.")
+            Text(L("После нескольких неудачных попыток восстановления. Повторные уведомления появятся только после нового обрыва."))
                 .font(.system(size: 11)).foregroundStyle(.secondary)
             if !notices.status.isEmpty { Text(notices.status).font(.system(size: 11)).foregroundStyle(.secondary) }
         }

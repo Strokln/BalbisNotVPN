@@ -89,13 +89,13 @@ enum DiagnosticReport {
         let region = choice(snapshot.region, allowed: ["AUTO", "EU", "AM", "Автоматически", "Европа", "США"])
         let strategy = choice(snapshot.strategy, allowed: ["0", "1", "2", "balanced", "split", "tls", "Сегментация TCP + TLS", "Только сегментация TCP", "Только разделение TLS"])
         let architecture = choice(metadata.architecture, allowed: ["x86_64", "arm64", "arm64e"])
-        let yesNo: (Bool) -> String = { $0 ? "да" : "нет" }
-        var lines = ["Диагностический отчёт Balbis", "", "Версия Balbis: \(version)", "macOS: \(os)", "Архитектура: \(architecture)",
-                     "Подключено: \(yesNo(snapshot.connected))", "Режим: \(mode)", "Регион: \(region)", "Стратегия: \(strategy)",
-                     "Зарубежное подключение: \(yesNo(snapshot.foreignEnabled))", "Восстановление при обрыве: \(yesNo(snapshot.automaticRecovery))",
-                     "Служба установлена: \(yesNo(metadata.helperInstalled)) (проверен только файл)", "", "Последние события"]
+        let yesNo: (Bool) -> String = { $0 ? L("да") : L("нет") }
+        var lines = [L("Диагностический отчёт Balbis"), "", L("Версия Balbis: %@", L(version)), L("macOS: %@", L(os)), L("Архитектура: %@", L(architecture)),
+                     L("Подключено: %@", yesNo(snapshot.connected)), L("Режим: %@", L(mode)), L("Регион: %@", L(region)), L("Стратегия: %@", L(strategy)),
+                     L("Зарубежное подключение: %@", yesNo(snapshot.foreignEnabled)), L("Восстановление при обрыве: %@", yesNo(snapshot.automaticRecovery)),
+                     L("Служба установлена: %@ (проверен только файл)", yesNo(metadata.helperInstalled)), "", L("Последние события")]
         let safeEvents = sanitizedEvents(events)
-        lines += safeEvents.isEmpty ? ["Нет подходящих событий."] : safeEvents
+        lines += safeEvents.isEmpty ? [L("Нет подходящих событий.")] : safeEvents
         return lines.joined(separator: "\n") + "\n"
     }
 
@@ -127,16 +127,16 @@ struct DiagnosticReportView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Отчёт создаётся на этом Mac. Проверьте текст перед сохранением. Ничего не отправляется автоматически.")
+            Text(L("Отчёт создаётся на этом Mac. Проверьте текст перед сохранением. Ничего не отправляется автоматически."))
                 .font(.system(size: 11)).foregroundStyle(.secondary)
             if !preview.isEmpty {
                 ScrollView {
                     Text(preview).font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(8)
                 }.frame(height: 180).background(Color.primary.opacity(0.04)).cornerRadius(8)
-                Button("Сохранить отчёт…") { savePreview() }
+                Button(L("Сохранить отчёт…")) { savePreview() }
             }
-            Button(preview.isEmpty ? "Подготовить отчёт" : "Обновить отчёт") {
+            Button(preview.isEmpty ? L("Подготовить отчёт") : L("Обновить отчёт")) {
                 preview = DiagnosticReport.generate(snapshot: snapshot, metadata: .current(), events: DiagnosticReport.recentEvents())
                 message = ""
             }
@@ -152,9 +152,9 @@ struct DiagnosticReportView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try DiagnosticReport.save(preview, to: url)
-            message = "Отчёт сохранён. Отправить его можно самостоятельно."
+            message = L("Отчёт сохранён. Отправить его можно самостоятельно.")
         } catch {
-            message = "Не удалось сохранить отчёт. Выберите другую папку."
+            message = L("Не удалось сохранить отчёт. Выберите другую папку.")
         }
     }
 }

@@ -23,7 +23,7 @@ final class UpdateChecker: ObservableObject {
     func check(manual: Bool = false) {
         guard !checking, manual || automatic else { return }
         checking = true
-        if manual { status = "Проверяем GitHub…" }
+        if manual { status = L("Проверяем GitHub…") }
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 10
         config.timeoutIntervalForResource = 15
@@ -44,12 +44,12 @@ final class UpdateChecker: ObservableObject {
                     self.session = nil
                     return
                 }
-                let local = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.9.0"
+                let local = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.10.0"
                 if let tag = version, let remote = ReleaseVersion(tag), let current = ReleaseVersion(local) {
                     self.available = remote > current ? tag : ""
-                    self.status = self.available.isEmpty ? "Установлена актуальная версия." : "Доступна версия \(tag)."
+                    self.status = self.available.isEmpty ? L("Установлена актуальная версия.") : L("Доступна версия %@.", tag)
                     if !self.available.isEmpty { self.onAvailable?() }
-                } else if manual { self.status = "GitHub не ответил. Попробуйте позже." }
+                } else if manual { self.status = L("GitHub не ответил. Попробуйте позже.") }
                 session.finishTasksAndInvalidate()
                 self.session = nil
             }
@@ -71,12 +71,12 @@ struct UpdateSettingsView: View {
     @ObservedObject var updates: UpdateChecker
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Toggle("Проверять обновления при запуске", isOn: $updates.automatic)
+            Toggle(L("Проверять обновления при запуске"), isOn: $updates.automatic)
                 .toggleStyle(.switch).controlSize(.small)
                 .onChange(of: updates.automatic) { UserDefaults.standard.set($0, forKey: "checkUpdates") }
-            Button(updates.checking ? "Проверяем…" : "Проверить обновления") { updates.check(manual: true) }.disabled(updates.checking)
+            Button(updates.checking ? L("Проверяем…") : L("Проверить обновления")) { updates.check(manual: true) }.disabled(updates.checking)
             if !updates.status.isEmpty { Text(updates.status).font(.system(size: 11)).foregroundStyle(.secondary) }
-            if !updates.available.isEmpty { Button("Открыть обновление на GitHub", action: updates.openRelease) }
+            if !updates.available.isEmpty { Button(L("Открыть обновление на GitHub"), action: updates.openRelease) }
         }
     }
 }
@@ -86,8 +86,8 @@ struct UpdateBannerView: View {
     var body: some View {
         if !updates.available.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Доступен Balbis \(updates.available)").font(.system(size: 13, weight: .semibold))
-                Button("Открыть обновление", action: updates.openRelease)
+                Text(L("Доступен Balbis %@", updates.available)).font(.system(size: 13, weight: .semibold))
+                Button(L("Открыть обновление"), action: updates.openRelease)
             }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
                 .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 22))
         }

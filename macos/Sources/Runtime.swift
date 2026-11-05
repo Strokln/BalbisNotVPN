@@ -4,7 +4,7 @@ import Darwin
 enum Strategy: Int, CaseIterable {
     case balanced, split, tls
     var name: String {
-        switch self { case .balanced: return "Сегментация TCP + TLS"; case .split: return "Только сегментация TCP"; case .tls: return "Только разделение TLS" }
+        switch self { case .balanced: return L("Сегментация TCP + TLS"); case .split: return L("Только сегментация TCP"); case .tls: return L("Только разделение TLS") }
     }
     var arguments: [String] {
         switch self {
@@ -137,7 +137,7 @@ final class BalbisRuntime {
             logHandle = try FileHandle(forWritingTo: log)
             let regions: [String]
             if foreign.enabled && foreign.region == "AUTO" {
-                onProgress?("Подбираем быстрое подключение…")
+                onProgress?(L("Подбираем быстрое подключение…"))
                 regions = AutomaticExitSelection.rankedRegions(resources: resources, strategy: strategy, executable: executable)
             } else {
                 regions = foreign.enabled ? [foreign.region] : [""]
@@ -148,7 +148,7 @@ final class BalbisRuntime {
                 do {
                     var args = ["--supervise", resources.appendingPathComponent("tpws").path, String(port), String(strategy.rawValue), sessionID]
                     if foreign.enabled {
-                        onProgress?("Подключение зарубежного выхода: \(region == "EU" ? "Европа" : "США")…")
+                        onProgress?(L("Подключение зарубежного выхода: %@…", region == "EU" ? L("Европа") : L("США")))
                         let directory = supportDirectory.appendingPathComponent("sessions/" + UUID().uuidString)
                         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
                         sessionDirectory = directory
@@ -174,9 +174,9 @@ final class BalbisRuntime {
                     }
                     guard ready else { throw BalbisError("Не удалось дождаться готовности туннеля. Попробуйте другой регион.") }
                     if foreign.enabled {
-                        onProgress?("Проверка зарубежного IP и маршрута нейросетей…")
+                        onProgress?(L("Проверка зарубежного IP и маршрута нейросетей…"))
                         let probe = try ForeignProbe.verify(httpPort: httpPort, socksPort: port, directDomains: excludedDomains, probeAPI: ForeignProbe.shouldProbeAPI(foreignDomains: domains, directDomains: excludedDomains))
-                        foreignStatus = "Выход: \(probe.country) · OpenAI: \(probe.aiRegion == "ok" ? "регион доступен" : "требует проверки в браузере")"
+                        foreignStatus = L("Выход: %@ · OpenAI: %@", probe.country, probe.aiRegion == "ok" ? L("регион доступен") : L("требует проверки в браузере"))
                     }
                     guard process.isRunning && socksReady(port: port) else { throw BalbisError("Маршрутизатор остановился во время проверки.") }
                     started = true
@@ -200,7 +200,7 @@ final class BalbisRuntime {
             }
         } catch {
             do { try recoverSnapshot(expectedID: sessionID) }
-            catch { throw BalbisError("Не удалось восстановить прокси: \(error.localizedDescription). Повторите отключение или восстановление.") }
+            catch { throw BalbisError("Не удалось восстановить прокси: %@. Повторите отключение или восстановление.", error.localizedDescription) }
             cleanup()
             throw error
         }

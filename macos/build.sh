@@ -36,6 +36,9 @@ cp "$ROOT/macos/tunnel/LICENSE" "$APP/Contents/Resources/licenses-opera/LICENSE"
 cp "$ROOT/macos/tunnel/THIRD_PARTY_NOTICES.md" "$APP/Contents/Resources/licenses-opera/THIRD_PARTY_NOTICES.md"
 cp -R "$ROOT/macos/tunnel/licenses/." "$APP/Contents/Resources/licenses-opera/"
 cp "$ROOT"/list/*.txt "$APP/Contents/Resources/list/"
+for localization in "$ROOT"/macos/Resources/*.lproj; do
+    cp -R "$localization" "$APP/Contents/Resources/"
+done
 cp "$ROOT/macos/Resources/Balbis.icns" "$APP/Contents/Resources/Balbis.icns"
 cp "$ROOT/macos/README.md" "$APP/Contents/Resources/README-macOS.txt"
 cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE-Balbis.txt"
@@ -46,14 +49,16 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
+<key>CFBundleDevelopmentRegion</key><string>ru</string>
+<key>CFBundleLocalizations</key><array><string>ru</string><string>en</string><string>uk</string><string>zh-Hans</string></array>
 <key>CFBundleIdentifier</key><string>local.balbis.macos</string>
 <key>CFBundleName</key><string>Balbis</string>
 <key>CFBundleDisplayName</key><string>Balbis</string>
 <key>CFBundleIconFile</key><string>Balbis.icns</string>
 <key>CFBundleExecutable</key><string>Balbis</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.9.0</string>
-<key>CFBundleVersion</key><string>16</string>
+<key>CFBundleShortVersionString</key><string>0.10.0</string>
+<key>CFBundleVersion</key><string>17</string>
 <key>LSUIElement</key><true/>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>

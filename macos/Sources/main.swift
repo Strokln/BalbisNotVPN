@@ -3,7 +3,7 @@ import Cocoa
 if CommandLine.arguments == [CommandLine.arguments[0], "--install-proxy-helper"] {
     do {
         try ProxyHelperClient.ensureInstalled()
-        print("Служба подключения Balbis готова.")
+        print(L("Служба подключения Balbis готова."))
         exit(0)
     } catch {
         fputs("\(error.localizedDescription)\n", stderr)
@@ -30,8 +30,8 @@ if FileManager.default.fileExists(atPath: previousDirectory.path) {
     if previousLock >= 0 {
         guard flock(previousLock, LOCK_EX | LOCK_NB) == 0 else {
             let alert = NSAlert()
-            alert.messageText = "Сначала завершите предыдущую версию"
-            alert.informativeText = "Выберите «Завершить» в меню работающего приложения, затем откройте Balbis."
+            alert.messageText = L("Сначала завершите предыдущую версию")
+            alert.informativeText = L("Выберите «Завершить» в меню работающего приложения, затем откройте Balbis.")
             alert.runModal()
             exit(1)
         }

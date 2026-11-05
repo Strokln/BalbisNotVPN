@@ -11,25 +11,30 @@
 
 Balbis helps you open selected websites. Click the shield in the menu bar, connect, and continue working. The panel includes country selection, custom websites, launch at login, and connection recovery.
 
-The ready-to-use app runs without Homebrew, Python, Go, or drivers. The interface is currently in Russian. The translated READMEs explain the same actions.
+The ready-to-use app runs without Homebrew, Python, Go, or drivers. The interface supports Russian, English, Ukrainian, and Simplified Chinese and follows macOS language preferences. This guide also retains the original Russian labels alongside explanations.
 
 
 **0.9.0** adds automatic foreign-region comparison before connecting, search and categories with domain switches and undo, a GitHub stable-release check at launch, and actionable connection errors. ⇧⌘B opens Balbis, ⌘Return toggles the connection, ⌘, opens settings, and Esc goes back or closes the panel. Update checks can be disabled in settings; installation remains manual.
+
+
+**0.10.0** adds Russian, English, Ukrainian, and Simplified Chinese interfaces. The language follows macOS preferences, including an app-specific language for Balbis. Screens, notifications, error messages, and diagnostic report labels are localized; technical identifiers and logs retain their format.
+
+The panel is now 640 points tall, so the normal home screen fits without scrolling.
 
 ## Download
 
 **[Latest release and checksums](https://github.com/Strokln/BalbisNotVPN/releases/latest)**
 
-Current disk images are **0.9.0**.
+Current disk images are **0.10.0**.
 
 | Your Mac | Download |
 | --- | --- |
-| Apple Silicon | [Balbis-0.9.0-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/Balbis-0.9.0-macOS-arm64.dmg) |
-| Intel | [Balbis-0.9.0-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/Balbis-0.9.0-macOS-x86_64.dmg) |
+| Apple Silicon | [Balbis-0.10.0-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.10.0/Balbis-0.10.0-macOS-arm64.dmg) |
+| Intel | [Balbis-0.10.0-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.10.0/Balbis-0.10.0-macOS-x86_64.dmg) |
 
 To identify your processor, open the Apple menu → About This Mac. An Apple chip means Apple Silicon. An Intel processor means the Intel build. See [Apple's guide](https://support.apple.com/en-us/116943) for more information.
 
-Each DMG contains **Balbis.app** and an **Applications** shortcut. **[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/SHA256SUMS.txt)** contains the checksums for both images.
+Each DMG contains **Balbis.app** and an **Applications** shortcut. **[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.10.0/SHA256SUMS.txt)** contains the checksums for both images.
 
 <details>
 <summary>Verify a downloaded image</summary>
@@ -37,7 +42,7 @@ Each DMG contains **Balbis.app** and an **Applications** shortcut. **[SHA256SUMS
 Download the DMG and SHA256SUMS.txt from the same release into one folder. In Terminal, change to that folder and run the following command for Intel.
 
 ```sh
-shasum -a 256 Balbis-0.9.0-macOS-x86_64.dmg
+shasum -a 256 Balbis-0.10.0-macOS-x86_64.dmg
 ```
 
 Compare the hash with that file's entry in SHA256SUMS.txt. For Apple Silicon, use the filename containing `arm64`. If you downloaded both images, you can check them together.

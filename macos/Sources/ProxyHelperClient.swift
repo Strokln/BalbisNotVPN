@@ -150,7 +150,7 @@ enum ProxyHelperClient {
         let script = "do shell script " + appleQuote(lines.joined(separator: "\n")) + " with administrator privileges"
         let result = try command("/usr/bin/osascript", ["-e", script])
         guard result.status == 0 else {
-            throw BalbisError("Не удалось установить службу подключения. " + result.output)
+            throw BalbisError("Не удалось установить службу подключения. %@", result.output)
         }
         for _ in 0..<25 {
             if isReady() { return }
@@ -190,6 +190,6 @@ enum ProxyHelperClient {
         /bin/rmdir '\(directory)' 2>/dev/null || true
         """
         let result = try command("/usr/bin/osascript", ["-e", "do shell script " + appleQuote(script) + " with administrator privileges"])
-        guard result.status == 0 else { throw BalbisError("Не удалось удалить службу подключения. " + result.output) }
+        guard result.status == 0 else { throw BalbisError("Не удалось удалить службу подключения. %@", result.output) }
     }
 }

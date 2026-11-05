@@ -48,7 +48,7 @@ final class BuiltInSitesStore: ObservableObject {
             if value.isEmpty { continue }
             guard DomainRules.parse(value) == [value], value.contains("."), !value.contains("#"),
                   !value.hasSuffix(".local"), value.range(of: "^[0-9.]+$", options: .regularExpression) == nil else {
-                throw BalbisError("Строка \(index + 1): нужен домен без ссылки, пути или комментария.")
+                throw BalbisError("Строка %d: нужен домен без ссылки, пути или комментария.", index + 1)
             }
             values.insert(value)
         }
@@ -99,7 +99,7 @@ final class BuiltInSitesStore: ObservableObject {
             syncText()
             error = ""
             message = ""
-        } catch { self.error = "Не удалось прочитать основной список сайтов. " + error.localizedDescription }
+        } catch { self.error = L("Не удалось прочитать основной список сайтов. ") + error.localizedDescription }
     }
     private func syncText() {
         synchronizingText = true
@@ -117,7 +117,7 @@ final class BuiltInSitesStore: ObservableObject {
             sites = updated.sorted { $0.domain < $1.domain }
             syncText()
             error = ""
-            message = "Текст применён к списку. Сохраните изменения."
+            message = L("Текст применён к списку. Сохраните изменения.")
             return true
         } catch { self.error = error.localizedDescription; return false }
     }
@@ -218,7 +218,7 @@ final class BuiltInSitesStore: ObservableObject {
             savedSites = sites
             isOverridden = true
             error = ""
-            message = "Список сохранён. Применится при следующем подключении."
+            message = L("Список сохранён. Применится при следующем подключении.")
         } catch { self.error = error.localizedDescription }
     }
     func restoreDefaults() {
@@ -228,8 +228,8 @@ final class BuiltInSitesStore: ObservableObject {
             if FileManager.default.fileExists(atPath: file.path) { try FileManager.default.removeItem(at: file) }
             if FileManager.default.fileExists(atPath: stateFile.path) { try FileManager.default.removeItem(at: stateFile) }
             reload()
-            message = "Встроенный список восстановлен. Применится при следующем подключении."
-        } catch { self.error = "Не удалось восстановить встроенный список сайтов. " + error.localizedDescription }
+            message = L("Встроенный список восстановлен. Применится при следующем подключении.")
+        } catch { self.error = L("Не удалось восстановить встроенный список сайтов. ") + error.localizedDescription }
     }
 }
 
@@ -239,50 +239,50 @@ struct BuiltInSitesView: View {
     @State private var category: SiteCategory = .all
     @State private var entry = ""
     var body: some View {
-        DisclosureGroup("Основной список сайтов") {
+        DisclosureGroup(L("Основной список сайтов")) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Включённые домены и их поддомены войдут в основной список. Изменения применятся при следующем подключении после сохранения. «Мои сайты» добавляются отдельно. Выключение строки не отменяет правило родительского домена; для прямого маршрута используйте «Исключения».")
+                Text(L("Включённые домены и их поддомены войдут в основной список. Изменения применятся при следующем подключении после сохранения. «Мои сайты» добавляются отдельно. Выключение строки не отменяет правило родительского домена; для прямого маршрута используйте «Исключения»."))
                     .font(.system(size: 11)).foregroundStyle(.secondary)
-                TextField("Поиск по домену", text: $search)
-                Picker("Категория", selection: $category) {
-                    ForEach(SiteCategory.allCases) { Text($0.rawValue).tag($0) }
-                }.labelsHidden().accessibilityLabel("Категория сайтов")
-                Text("Включено \(store.enabledDomains.count) из \(store.sites.count)")
+                TextField(L("Поиск по домену"), text: $search)
+                Picker(L("Категория"), selection: $category) {
+                    ForEach(SiteCategory.allCases) { Text(L($0.rawValue)).tag($0) }
+                }.labelsHidden().accessibilityLabel(L("Категория сайтов"))
+                Text(L("Включено %d из %d", store.enabledDomains.count, store.sites.count))
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                 siteList
                 if let deleted = store.lastDeleted {
                     HStack {
-                        Text("Удалён \(deleted.domain)").font(.system(size: 11)).lineLimit(1)
+                        Text(L("Удалён %@", deleted.domain)).font(.system(size: 11)).lineLimit(1)
                         Spacer()
-                        Button("Отменить") { store.undoDelete() }.disabled(store.textIsDirty)
+                        Button(L("Отменить")) { store.undoDelete() }.disabled(store.textIsDirty)
                     }
                 }
                 HStack {
                     TextField("example.com", text: $entry)
-                    Button("Добавить") { if store.add(entry) { entry = "" } }
+                    Button(L("Добавить")) { if store.add(entry) { entry = "" } }
                 }.disabled(store.textIsDirty)
-                DisclosureGroup("Дополнительно: полный текст") {
+                DisclosureGroup(L("Дополнительно: полный текст")) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Один включённый домен в строке. Удалённые из текста домены останутся в списке выключенными. Примените текст перед изменением переключателей.")
+                        Text(L("Один включённый домен в строке. Удалённые из текста домены останутся в списке выключенными. Примените текст перед изменением переключателей."))
                             .font(.system(size: 11)).foregroundStyle(.secondary)
                         TextEditor(text: $store.text)
                             .font(.system(size: 11, design: .monospaced))
                             .frame(height: 160)
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.secondary.opacity(0.3)))
-                            .accessibilityLabel("Основной список включённых доменов, один домен в строке")
+                            .accessibilityLabel(L("Основной список включённых доменов, один домен в строке"))
                         if store.textIsDirty {
                             HStack {
-                                Button("Применить к списку") { store.applyText() }
-                                Button("Отменить текст") { store.discardText() }
+                                Button(L("Применить к списку")) { store.applyText() }
+                                Button(L("Отменить текст")) { store.discardText() }
                             }
                         }
                     }.padding(.top, 8)
                 }
                 Group {
-                    Button("Сохранить изменения") { store.save() }
-                    Button("Восстановить встроенный") { store.restoreDefaults() }
-                    Button("Перезагрузить с диска") { store.reload() }
-                    Text(store.hasUnsavedChanges ? "Есть несохранённые изменения." : (store.isOverridden ? "Используется ваш основной список." : "Используются встроенные списки."))
+                    Button(L("Сохранить изменения")) { store.save() }
+                    Button(L("Восстановить встроенный")) { store.restoreDefaults() }
+                    Button(L("Перезагрузить с диска")) { store.reload() }
+                    Text(store.hasUnsavedChanges ? L("Есть несохранённые изменения.") : (store.isOverridden ? L("Используется ваш основной список.") : L("Используются встроенные списки.")))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                     if !store.message.isEmpty { Text(store.message).font(.system(size: 11)).foregroundStyle(.secondary) }
                     if !store.error.isEmpty { Text(store.error).font(.system(size: 11)).foregroundStyle(.orange) }
@@ -294,7 +294,7 @@ struct BuiltInSitesView: View {
         let rows = store.filteredSites(search: search, category: category)
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 8) {
-                if rows.isEmpty { Text("Сайты не найдены.").foregroundStyle(.secondary) }
+                if rows.isEmpty { Text(L("Сайты не найдены.")).foregroundStyle(.secondary) }
                 ForEach(rows) { site in
                     HStack(spacing: 8) {
                         Toggle(site.domain, isOn: Binding(get: {
@@ -303,7 +303,7 @@ struct BuiltInSitesView: View {
                             .toggleStyle(.checkbox).lineLimit(1)
                         Spacer(minLength: 0)
                         Button { store.remove(site.domain) } label: { Image(systemName: "trash") }
-                            .buttonStyle(.plain).accessibilityLabel("Удалить " + site.domain)
+                            .buttonStyle(.plain).accessibilityLabel(L("Удалить ") + site.domain)
                     }
                 }
             }.padding(6)

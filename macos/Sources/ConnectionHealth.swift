@@ -27,26 +27,26 @@ struct ConnectionHealth {
 
     static func check(port: UInt16, foreignPort: UInt16) throws -> String {
         guard socksReady(port: port) else { throw BalbisError("Локальная служба не отвечает.") }
-        var route = "Balbis отвечает · Зарубежный выход выключен"
+        var route = L("Balbis отвечает · Зарубежный выход выключен")
         var traceAlive = false
         if foreignPort != 0 {
             let trace = try? probe(url: "https://www.cloudflare.com/cdn-cgi/trace", proxy: "http://127.0.0.1:\(foreignPort)", keepBody: true)
             traceAlive = trace?.alive == true
             if let trace = trace, trace.alive, let country = try? ForeignProbe.parseTrace(trace.body) {
-                route = "Balbis отвечает · Страна: \(country)"
+                route = L("Balbis отвечает · Страна: %@", country)
             } else {
-                route = "Balbis отвечает · Страну выхода определить не удалось"
+                route = L("Balbis отвечает · Страну выхода определить не удалось")
             }
         }
         let api = try? probe(url: "https://api.openai.com/v1/models", proxy: "socks5h://127.0.0.1:\(port)")
         guard traceAlive || api?.alive == true else { throw BalbisError("Маршрут не передаёт запросы.") }
         let apiReport: String
         if let api = api, api.alive {
-            apiReport = [200, 401].contains(api.status) ? "OpenAI API: отвечает (HTTP \(api.status))" : "OpenAI API: HTTP \(api.status); доступ требует проверки"
+            apiReport = [200, 401].contains(api.status) ? L("OpenAI API: отвечает (HTTP %d)", api.status) : L("OpenAI API: HTTP %d; доступ требует проверки", api.status)
         } else {
-            apiReport = "OpenAI API: запрос не прошёл; маршрут отвечает"
+            apiReport = L("OpenAI API: запрос не прошёл; маршрут отвечает")
         }
-        return route + "\n" + apiReport + "\nChatGPT: отдельно не проверялся; проверьте сайт или приложение."
+        return route + "\n" + apiReport + "\n" + L("ChatGPT: отдельно не проверялся; проверьте сайт или приложение.")
     }
 }
 
