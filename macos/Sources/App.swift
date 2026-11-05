@@ -5,6 +5,9 @@ import Network
 
 final class PanelModel: ObservableObject {
     let notices = ConnectionNotices()
+    let updates = UpdateChecker()
+    @Published var shortcutAvailable = false
+    @Published var problem: ConnectionProblem?
     private var recoveryNoticePolicy = RecoveryNoticePolicy()
     @Published var automaticRecovery = UserDefaults.standard.object(forKey: "automaticRecovery") == nil || UserDefaults.standard.bool(forKey: "automaticRecovery")
     @Published var checkResult = ""
@@ -156,6 +159,7 @@ final class PanelModel: ObservableObject {
         let selectedService = service
         let selectedStrategy = Strategy(rawValue: strategy) ?? .balanced
         let options = ForeignOptions(enabled: foreign, youtube: youtube, region: ["AUTO", "EU", "AM"][region])
+        problem = nil
         message = stopping ? "Завершаем подключение…" : "Подбираем доступное подключение…"
         perform(recoveryOperation: true) {
             if stopping { try self.runtime.stop() }
@@ -198,8 +202,9 @@ final class PanelModel: ObservableObject {
                     if error is UserFacingError && self.connected && self.runtime.isAlive {
                         self.connectionRecovered()
                     }
-                    self.message = (error as? UserFacingError)?.message
-                        ?? "Не удалось подключиться. Проверьте сеть или выберите другую страну в настройках."
+                    let problem = ConnectionProblem.explain(error)
+                    self.problem = problem
+                    self.message = problem.message
                     self.diagnostics = error.localizedDescription
                     if recoveryOperation && !(error is UserFacingError) {
                         if self.automaticRecovery && self.reconnectPolicy.wanted && self.notices.enabled && self.recoveryNoticePolicy.recordFailure() {
@@ -345,6 +350,7 @@ final class PanelModel: ObservableObject {
         } completion: { self.message = "Страна изменена."; self.connectionRecovered() }
     }
     private func connectionRecovered() {
+        problem = nil
         reconnectPolicy.reset()
         healthFailures.reset()
         recoveryNoticePolicy.reset()
@@ -492,12 +498,13 @@ struct BalbisPanel: View {
                 Image(systemName: model.settings ? "xmark" : "slider.horizontal.3")
                     .font(.system(size: 13, weight: .medium)).frame(width: 32, height: 32)
                     .background(.white.opacity(0.08), in: Circle())
-            }.buttonStyle(.plain).help(model.settings ? "Назад" : "Настройки")
+            }.buttonStyle(.plain).keyboardShortcut(",", modifiers: .command).help(model.settings ? "Назад" : "Настройки")
                 .accessibilityLabel(model.settings ? "Вернуться к подключению" : "Настройки")
         }.padding(.bottom, 22)
     }
     private var homePage: some View {
         VStack(spacing: 18) {
+            UpdateBannerView(updates: model.updates)
             VStack(spacing: 13) {
                 powerButton
                 HStack(spacing: 6) {
@@ -567,12 +574,20 @@ struct BalbisPanel: View {
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
             }.frame(maxWidth: .infinity).contentShape(Rectangle())
         }.buttonStyle(.plain).disabled(model.busy)
+            .keyboardShortcut(.return, modifiers: .command)
             .accessibilityLabel(model.waitingForNetwork ? "Отменить автоматическое подключение" : model.connected ? "Отключить Balbis" : "Подключить Balbis")
     }
     private var notice: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(model.message.isEmpty ? "Восстановите настройки предыдущего подключения." : model.message)
                 .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+            if let problem = model.problem {
+                switch problem.action {
+                case .retry: Button("Повторить", action: model.retryNow).disabled(model.busy)
+                case .settings: Button("Открыть настройки") { model.settings = true }
+                case .network: Button("Открыть настройки сети") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.network")!) }
+                }
+            }
             if model.recoveryNeeded && !model.connected {
                 Button("Восстановить подключение", action: model.recover).disabled(model.busy)
             }
@@ -601,7 +616,21 @@ struct BalbisPanel: View {
     private var settingsPage: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                Group {
                 startupSettings
+                DisclosureGroup("Обновления и клавиатура") {
+                VStack(alignment: .leading, spacing: 12) {
+                UpdateSettingsView(updates: model.updates)
+                Divider().opacity(0.35)
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("Клавиатура").font(.system(size: 13, weight: .semibold))
+                    Text(model.shortcutAvailable ? "⇧⌘B — открыть Balbis из любого приложения" : "⇧⌘B недоступно: сочетание занято другой программой.")
+                    Text("⌘Return — подключить или отключить · ⌘, — настройки · Esc — назад или закрыть")
+                    Text("Для перехода по всем элементам включите навигацию клавиатурой в настройках macOS.").foregroundStyle(.secondary)
+                }.font(.system(size: 11))
+                }.padding(.top, 10)
+                }.font(.system(size: 12)).modifier(GlassCard())
+                }
                 VStack(alignment: .leading, spacing: 12) {
                     Button(model.checkingConnection ? "Проверяем…" : "Проверить подключение") { model.checkConnection() }.disabled(model.busy || model.checkingConnection || !model.connected)
                     if !model.checkResult.isEmpty { Text(model.checkResult).font(.system(size: 11)).textSelection(.enabled) }
@@ -677,7 +706,7 @@ struct BalbisPanel: View {
             Text("Balbis by Strokin").font(.system(size: 10, weight: .medium)).foregroundStyle(.tertiary)
             Spacer()
             if model.settings {
-                Text("0.8.1").font(.system(size: 10)).foregroundStyle(.tertiary)
+                Text("0.9.0").font(.system(size: 10)).foregroundStyle(.tertiary)
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").font(.system(size: 12)) }
                     .buttonStyle(.plain).help("Завершить Balbis").disabled(model.busy)
             } else {
@@ -690,6 +719,8 @@ struct BalbisPanel: View {
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private let model = PanelModel()
     private let popover = NSPopover()
+    private let shortcut = PanelShortcut()
+    private var keyMonitor: Any?
     private var statusItem: NSStatusItem!
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -708,6 +739,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         model.notices.onRetry = { [weak self] in self?.showPanel(); self?.model.retryNow() }
         model.notices.onSettings = { [weak self] in self?.model.settings = true; self?.showPanel() }
         model.notices.configure()
+        model.updates.onAvailable = { [weak self] in self?.showPanel() }
+        model.updates.check()
+        shortcut.onOpen = { [weak self] in self?.togglePanel() }
+        model.shortcutAvailable = shortcut.register()
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self, self.popover.isShown, event.keyCode == 53 else { return event }
+            if self.popover.contentViewController?.view.window?.firstResponder is NSTextView {
+                self.popover.contentViewController?.view.window?.makeFirstResponder(nil)
+            } else if self.model.settings { self.model.settings = false } else { self.popover.performClose(nil) }
+            return nil
+        }
         model.observeConnection()
         let event = NSAppleEventManager.shared().currentAppleEvent
         let loginLaunch = event?.eventID == kAEOpenApplication

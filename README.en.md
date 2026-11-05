@@ -13,20 +13,23 @@ Balbis helps you open selected websites. Click the shield in the menu bar, conne
 
 The ready-to-use app runs without Homebrew, Python, Go, or drivers. The interface is currently in Russian. The translated READMEs explain the same actions.
 
+
+**0.9.0** adds automatic foreign-region comparison before connecting, search and categories with domain switches and undo, a GitHub stable-release check at launch, and actionable connection errors. ⇧⌘B opens Balbis, ⌘Return toggles the connection, ⌘, opens settings, and Esc goes back or closes the panel. Update checks can be disabled in settings; installation remains manual.
+
 ## Download
 
 **[Latest release and checksums](https://github.com/Strokln/BalbisNotVPN/releases/latest)**
 
-Current disk images are **0.8.1**.
+Current disk images are **0.9.0**.
 
 | Your Mac | Download |
 | --- | --- |
-| Apple Silicon | [Balbis-0.8.1-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.1/Balbis-0.8.1-macOS-arm64.dmg) |
-| Intel | [Balbis-0.8.1-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.1/Balbis-0.8.1-macOS-x86_64.dmg) |
+| Apple Silicon | [Balbis-0.9.0-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/Balbis-0.9.0-macOS-arm64.dmg) |
+| Intel | [Balbis-0.9.0-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/Balbis-0.9.0-macOS-x86_64.dmg) |
 
 To identify your processor, open the Apple menu → About This Mac. An Apple chip means Apple Silicon. An Intel processor means the Intel build. See [Apple's guide](https://support.apple.com/en-us/116943) for more information.
 
-Each DMG contains **Balbis.app** and an **Applications** shortcut. **[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.1/SHA256SUMS.txt)** contains the checksums for both images.
+Each DMG contains **Balbis.app** and an **Applications** shortcut. **[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/SHA256SUMS.txt)** contains the checksums for both images.
 
 <details>
 <summary>Verify a downloaded image</summary>
@@ -34,7 +37,7 @@ Each DMG contains **Balbis.app** and an **Applications** shortcut. **[SHA256SUMS
 Download the DMG and SHA256SUMS.txt from the same release into one folder. In Terminal, change to that folder and run the following command for Intel.
 
 ```sh
-shasum -a 256 Balbis-0.8.1-macOS-x86_64.dmg
+shasum -a 256 Balbis-0.9.0-macOS-x86_64.dmg
 ```
 
 Compare the hash with that file's entry in SHA256SUMS.txt. For Apple Silicon, use the filename containing `arm64`. If you downloaded both images, you can check them together.

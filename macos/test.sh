@@ -58,3 +58,16 @@ xcrun swiftc -target "$(uname -m)-apple-macos13.0" \
     "$ROOT/macos/Sources/ConnectionNotices.swift" "$ROOT/macos/tests/RecoveryNoticeTests.swift" \
     -framework Cocoa -o "$ROOT/macos/build/tests/recovery-notice-tests"
 "$ROOT/macos/build/tests/recovery-notice-tests"
+xcrun swiftc -target "$(uname -m)-apple-macos13.0" \
+    -module-cache-path "$ROOT/macos/build/module-cache" \
+    "$ROOT/macos/Sources/Core.swift" "$ROOT/macos/Sources/ProxyHelperClient.swift" \
+    "$ROOT/macos/Helper/HelperProtocol.swift" "$ROOT/macos/Sources/Updates.swift" \
+    "$ROOT/macos/Sources/ConnectionProblem.swift" "$ROOT/macos/tests/ProductFeaturesTests.swift" \
+    -framework Cocoa -o "$ROOT/macos/build/tests/product-features-tests"
+"$ROOT/macos/build/tests/product-features-tests"
+xcrun swiftc -target "$(uname -m)-apple-macos13.0" \
+    -module-cache-path "$ROOT/macos/build/module-cache" \
+    "${panel_sources[@]}" "$ROOT/macos/Helper/HelperProtocol.swift" \
+    "$ROOT/macos/tests/AutomaticExitSelectionTests.swift" -framework Cocoa -framework Network \
+    -o "$ROOT/macos/build/tests/automatic-exit-selection-tests"
+"$ROOT/macos/build/tests/automatic-exit-selection-tests"

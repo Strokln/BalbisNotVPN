@@ -13,20 +13,23 @@ Balbis помогает открывать выбранные сайты. Наж
 
 Готовое приложение работает без Homebrew, Python, Go и драйверов. Интерфейс пока на русском. Переводы README объясняют те же действия.
 
+
+В **0.9.0**: автоматическое сравнение зарубежных регионов перед подключением, поиск и категории в основном списке с переключателями и отменой удаления, проверка новых стабильных релизов GitHub при запуске, понятные ошибки с действиями. ⇧⌘B открывает Balbis, ⌘Return управляет подключением, ⌘, открывает настройки, Esc возвращает назад или закрывает панель. Проверку обновлений можно выключить в настройках; обновление устанавливается вручную.
+
 ## Скачать
 
 **[Последний релиз и контрольные суммы](https://github.com/Strokln/BalbisNotVPN/releases/latest)**
 
-Текущие образы — **0.8.1**.
+Текущие образы — **0.9.0**.
 
 | Ваш Mac | Какой образ скачать |
 | --- | --- |
-| Apple Silicon | [Balbis-0.8.1-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.1/Balbis-0.8.1-macOS-arm64.dmg) |
-| Intel | [Balbis-0.8.1-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.1/Balbis-0.8.1-macOS-x86_64.dmg) |
+| Apple Silicon | [Balbis-0.9.0-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/Balbis-0.9.0-macOS-arm64.dmg) |
+| Intel | [Balbis-0.9.0-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/Balbis-0.9.0-macOS-x86_64.dmg) |
 
 Чтобы определить процессор, откройте меню Apple → «Об этом Mac». Чип Apple означает Apple Silicon, процессор Intel — сборку Intel. Дополнительная справка есть у [Apple](https://support.apple.com/ru-ru/116943).
 
-В каждом DMG есть **Balbis.app** и ссылка на папку **«Программы»**. Файл **[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.1/SHA256SUMS.txt)** содержит контрольные суммы обоих образов.
+В каждом DMG есть **Balbis.app** и ссылка на папку **«Программы»**. Файл **[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.9.0/SHA256SUMS.txt)** содержит контрольные суммы обоих образов.
 
 <details>
 <summary>Как проверить скачанный образ</summary>
@@ -34,7 +37,7 @@ Balbis помогает открывать выбранные сайты. Наж
 Скачайте DMG и SHA256SUMS.txt из одного релиза в одну папку. В Терминале перейдите в эту папку и выполните, например для Intel.
 
 ```sh
-shasum -a 256 Balbis-0.8.1-macOS-x86_64.dmg
+shasum -a 256 Balbis-0.9.0-macOS-x86_64.dmg
 ```
 
 Сравните полученный хеш со строкой этого файла в SHA256SUMS.txt. Для Apple Silicon используйте имя файла с `arm64`. Если скачаны оба образа, можно проверить их вместе.

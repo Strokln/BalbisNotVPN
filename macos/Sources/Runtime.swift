@@ -135,7 +135,13 @@ final class BalbisRuntime {
             try Data().write(to: log, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: log.path)
             logHandle = try FileHandle(forWritingTo: log)
-            let regions = foreign.enabled ? (foreign.region == "AUTO" ? ["EU", "AM"] : [foreign.region]) : [""]
+            let regions: [String]
+            if foreign.enabled && foreign.region == "AUTO" {
+                onProgress?("Подбираем быстрое подключение…")
+                regions = AutomaticExitSelection.rankedRegions(resources: resources, strategy: strategy, executable: executable)
+            } else {
+                regions = foreign.enabled ? [foreign.region] : [""]
+            }
             var started = false
             var lastError: Error = BalbisError("Туннель не запустился.")
             for region in regions {

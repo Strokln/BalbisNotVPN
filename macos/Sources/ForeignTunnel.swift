@@ -16,6 +16,7 @@ struct SessionConfig: Codable {
     let region: String
     let domainsFile: String
     var excludedFile: String? = nil
+    var probeOnly: Bool? = nil
 }
 
 func foreignDomains(resources: URL, youtube: Bool, baseDomains: [String]? = nil) throws -> [String] {
@@ -112,7 +113,7 @@ func runTunnelSupervisor(config: SessionConfig) -> Int32 {
         child.standardOutput = quiet ? FileHandle.nullDevice : FileHandle.standardError
         child.standardError = quiet ? FileHandle.nullDevice : FileHandle.standardError
         child.terminationHandler = { process in
-            ConnectionEvents.record("child-exit name=\(name) status=\(process.terminationStatus)")
+            if config.probeOnly != true { ConnectionEvents.record("child-exit name=\(name) status=\(process.terminationStatus)") }
             finished.signal()
         }
         try child.run()
@@ -144,9 +145,159 @@ func runTunnelSupervisor(config: SessionConfig) -> Int32 {
     for _ in 0..<20 { if children.allSatisfy({ !$0.isRunning }) { break }; usleep(100_000) }
     for child in children where child.isRunning { kill(child.processIdentifier, SIGKILL) }
     children.forEach { $0.waitUntilExit() }
-    if parentGone.wait(timeout: .now()) == .success {
+    if parentGone.wait(timeout: .now()) == .success && config.probeOnly != true {
         do { try recoverSnapshot(expectedID: config.sessionID) }
         catch { fputs("Восстановление прокси: \(error.localizedDescription)\n", stderr) }
     }
     return 0
+}
+
+// AUTO compares verified region routes before the user session changes any PAC settings.
+struct ExitCandidateScore: Equatable {
+    let region: String
+    let seconds: Double
+    let downloadedBytes: Int
+    var bytesPerSecond: Double? = nil
+    var estimatedCost: Double {
+        // Compare a verified request plus the estimated transfer time of 128 KiB.
+        // An unavailable download is not evidence of a dead region.
+        guard let rate = bytesPerSecond, rate.isFinite, rate > 0 else { return seconds + 1 }
+        return seconds + 131_072 / rate
+    }
+}
+
+enum ExitSelectionPolicy {
+    static func orderedRegions(_ scores: [ExitCandidateScore]) -> [String] {
+        let valid = scores.filter {
+            ["EU", "AM"].contains($0.region) && $0.seconds.isFinite && $0.seconds > 0 &&
+                (1...4096).contains($0.downloadedBytes)
+        }
+        let sorted = valid.sorted {
+            if $0.estimatedCost == $1.estimatedCost { return $0.region == "EU" && $1.region != "EU" }
+            return $0.estimatedCost < $1.estimatedCost
+        }
+        var result: [String] = []
+        for region in sorted.map(\.region) + ["EU", "AM"] where !result.contains(region) { result.append(region) }
+        return result
+    }
+}
+
+// Every candidate owns its children, including a partially started candidate.
+// No command shell is used and the cleanup deadline does not depend on child cooperation.
+final class ExitCandidateProcesses {
+    private(set) var children: [Process] = []
+    private var lifelines: [Pipe] = []
+    @discardableResult func launch(_ executable: URL, _ arguments: [String], lifeline: Bool = false) throws -> Process {
+        let process = Process()
+        process.executableURL = executable
+        process.arguments = arguments
+        let pipe = lifeline ? Pipe() : nil
+        process.standardInput = pipe ?? FileHandle.nullDevice
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        children.append(process)
+        if let pipe = pipe {
+            try? pipe.fileHandleForReading.close()
+            lifelines.append(pipe)
+        }
+        return process
+    }
+    func stop() {
+        lifelines.forEach { try? $0.fileHandleForWriting.close() }
+        lifelines.removeAll()
+        for child in children.reversed() where child.isRunning { child.terminate() }
+        let deadline = ProcessInfo.processInfo.systemUptime + 3
+        while children.contains(where: \.isRunning) && ProcessInfo.processInfo.systemUptime < deadline { usleep(20_000) }
+        for child in children where child.isRunning { kill(child.processIdentifier, SIGKILL) }
+        children.forEach { $0.waitUntilExit() }
+        children.removeAll()
+    }
+    deinit { stop() }
+}
+
+private final class ExitCandidateResults {
+    private let lock = NSLock()
+    private var scores: [ExitCandidateScore] = []
+    func append(_ value: ExitCandidateScore) { lock.lock(); defer { lock.unlock() }; scores.append(value) }
+    func orderedRegions() -> [String] { lock.lock(); defer { lock.unlock() }; return ExitSelectionPolicy.orderedRegions(scores) }
+}
+
+enum AutomaticExitSelection {
+    static func rankedRegions(resources: URL, strategy: Strategy, executable: String) -> [String] {
+        let group = DispatchGroup()
+        let results = ExitCandidateResults()
+        // Independent candidates run concurrently on worker threads, never the GUI thread.
+        for region in ["EU", "AM"] {
+            group.enter()
+            DispatchQueue.global(qos: .utility).async {
+                defer { group.leave() }
+                if let score = try? measure(region: region, resources: resources, strategy: strategy, executable: executable) { results.append(score) }
+            }
+        }
+        group.wait()
+        // Unmeasurable regions remain as last-resort fallbacks. Final session verification
+        // still decides whether an actual connection may be reported as established.
+        return results.orderedRegions()
+    }
+
+    private static func measure(region: String, resources: URL, strategy: Strategy, executable: String) throws -> ExitCandidateScore {
+        let owned = ExitCandidateProcesses()
+        defer { owned.stop() }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("balbis-exit-probe-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        defer { owned.stop(); try? FileManager.default.removeItem(at: directory) }
+        var ports = Set<UInt16>()
+        while ports.count < 3 { ports.insert(try availablePort()) }
+        let selected = ports.sorted()
+        let httpPort = selected[2]
+        let domains = directory.appendingPathComponent("domains.txt")
+        try Data().write(to: domains)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: domains.path)
+        let config = SessionConfig(resources: resources.path, dpiPort: selected[0], socksPort: selected[1], httpPort: httpPort,
+            strategy: strategy.rawValue, sessionID: UUID().uuidString, region: region, domainsFile: domains.path, excludedFile: nil, probeOnly: true)
+        let file = directory.appendingPathComponent("session.json")
+        try JSONEncoder().encode(config).write(to: file)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        // Reuse the existing EOF-supervised child tree. If the app itself is killed,
+        // the pipe closes and this supervisor still cleans up Opera, tpws and router.
+        let supervisor = try owned.launch(URL(fileURLWithPath: executable), ["--tunnel-session", file.path], lifeline: true)
+        let startupDeadline = ProcessInfo.processInfo.systemUptime + 27
+        while supervisor.isRunning && ProcessInfo.processInfo.systemUptime < startupDeadline {
+            if tcpReady(port: httpPort) && socksReady(port: selected[1]) { break }
+            usleep(50_000)
+        }
+        guard supervisor.isRunning, tcpReady(port: httpPort), socksReady(port: selected[1]) else { throw BalbisError("Кандидат зарубежного выхода не готов.") }
+        let result = try command("/usr/bin/curl", ["-q", "--proxy", "http://127.0.0.1:\(httpPort)", "--noproxy", "",
+            "--connect-timeout", "3", "--max-time", "6", "--max-filesize", "4096", "--silent", "--show-error",
+            "--write-out", "\nBALBIS_METRICS:%{http_code}:%{time_total}:%{size_download}", "https://www.cloudflare.com/cdn-cgi/trace"])
+        guard result.status == 0, supervisor.isRunning,
+              let marker = result.output.range(of: "\nBALBIS_METRICS:", options: .backwards) else {
+            throw BalbisError("Кандидат не передаёт проверочный запрос.")
+        }
+        let body = String(result.output[..<marker.lowerBound])
+        _ = try ForeignProbe.parseTrace(body)
+        let metrics = result.output[marker.upperBound...].split(separator: ":")
+        guard metrics.count == 3, metrics[0] == "200", let seconds = Double(metrics[1]), seconds.isFinite, seconds > 0,
+              let bytes = Double(metrics[2]), bytes.isFinite, bytes >= 1, bytes <= 4096 else {
+            throw BalbisError("Некорректный результат проверки кандидата.")
+        }
+        // This URL is the vendored backend's own default benchmark URL.
+        // A denied/failed benchmark leaves the verified trace candidate eligible.
+        var rate: Double?
+        if let download = try? command("/usr/bin/curl", ["-q", "--proxy", "http://127.0.0.1:\(httpPort)", "--noproxy", "",
+            "--connect-timeout", "2", "--max-time", "5", "--max-filesize", "262144", "--range", "0-262143",
+            "--silent", "--show-error", "--output", "/dev/null", "--write-out", "\nBALBIS_SPEED:%{http_code}:%{time_total}:%{size_download}",
+            "https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"]), download.status == 0,
+           let speedMarker = download.output.range(of: "\nBALBIS_SPEED:", options: .backwards) {
+            let sample = download.output[speedMarker.upperBound...].split(separator: ":")
+            if sample.count == 3, ["200", "206"].contains(String(sample[0])),
+               let elapsed = Double(sample[1]), elapsed.isFinite, elapsed > 0,
+               let count = Double(sample[2]), count.isFinite, (1024...262144).contains(count) {
+                rate = count / elapsed
+            }
+        }
+        guard supervisor.isRunning else { throw BalbisError("Кандидат завершился во время проверки.") }
+        return ExitCandidateScore(region: region, seconds: seconds, downloadedBytes: Int(bytes), bytesPerSecond: rate)
+    }
 }
