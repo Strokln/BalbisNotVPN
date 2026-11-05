@@ -5,14 +5,14 @@ mkdir -p "$ROOT/macos/build/tests"
 xcrun swiftc -target "$(uname -m)-apple-macos13.0" \
     -module-cache-path "$ROOT/macos/build/module-cache" \
     "$ROOT/macos/Sources/ProxyHelperClient.swift" "$ROOT/macos/Helper/HelperProtocol.swift" \
-    "$ROOT/macos/Sources/ConnectionEvents.swift" "$ROOT/macos/Sources/CustomSites.swift" "$ROOT/macos/Sources/Core.swift" "$ROOT/macos/Sources/PACServer.swift" "$ROOT/macos/Sources/Runtime.swift" "$ROOT/macos/Sources/ForeignTunnel.swift" \
-    "$ROOT/macos/Sources/ConnectionHealth.swift" "$ROOT/macos/tests/RecoveryTests.swift" "$ROOT/macos/tests/CoreTests.swift" -framework Network -framework JavaScriptCore \
+    "$ROOT/macos/Sources/BuiltInSites.swift" "$ROOT/macos/Sources/ExcludedSites.swift" "$ROOT/macos/Sources/ConnectionEvents.swift" "$ROOT/macos/Sources/CustomSites.swift" "$ROOT/macos/Sources/Core.swift" "$ROOT/macos/Sources/PACServer.swift" "$ROOT/macos/Sources/Runtime.swift" "$ROOT/macos/Sources/ForeignTunnel.swift" \
+    "$ROOT/macos/tests/BuiltInSitesTests.swift" "$ROOT/macos/tests/ExcludedSitesTests.swift" "$ROOT/macos/Sources/ConnectionHealth.swift" "$ROOT/macos/tests/RecoveryTests.swift" "$ROOT/macos/tests/CoreTests.swift" -framework Network -framework JavaScriptCore \
     -o "$ROOT/macos/build/tests/core-tests"
 "$ROOT/macos/build/tests/core-tests" "$ROOT/macos"
 python3 "$ROOT/macos/tests/test_engine.py" -v
 xcrun swiftc -target "$(uname -m)-apple-macos13.0" \
     -module-cache-path "$ROOT/macos/build/module-cache" \
-    "$ROOT/macos/Sources/ConnectionEvents.swift" "$ROOT/macos/Sources/CustomSites.swift" "$ROOT/macos/Sources/Core.swift" "$ROOT/macos/Sources/ProxyHelperClient.swift" \
+    "$ROOT/macos/Sources/Core.swift" "$ROOT/macos/Sources/ProxyHelperClient.swift" \
     "$ROOT/macos/Helper/HelperProtocol.swift" "$ROOT/macos/tests/HelperClientTests.swift" \
     -o "$ROOT/macos/build/tests/helper-client-tests"
 "$ROOT/macos/build/tests/helper-client-tests"
@@ -43,3 +43,18 @@ xcrun swiftc -target "$(uname -m)-apple-macos13.0" \
     "$ROOT/macos/tests/ConnectionHealthTests.swift" -framework Cocoa -framework Network \
     -o "$ROOT/macos/build/tests/connection-health-tests"
 "$ROOT/macos/build/tests/connection-health-tests"
+
+xcrun swiftc -target "$(uname -m)-apple-macos13.0" \
+    -module-cache-path "$ROOT/macos/build/module-cache" \
+    "$ROOT/macos/Sources/Core.swift" "$ROOT/macos/Sources/ProxyHelperClient.swift" \
+    "$ROOT/macos/Helper/HelperProtocol.swift" "$ROOT/macos/Sources/DiagnosticReport.swift" \
+    "$ROOT/macos/tests/DiagnosticReportTests.swift" -framework Cocoa \
+    -o "$ROOT/macos/build/tests/diagnostic-report-tests"
+"$ROOT/macos/build/tests/diagnostic-report-tests"
+xcrun swiftc -target "$(uname -m)-apple-macos13.0" \
+    -module-cache-path "$ROOT/macos/build/module-cache" \
+    "$ROOT/macos/Sources/Core.swift" "$ROOT/macos/Sources/ProxyHelperClient.swift" \
+    "$ROOT/macos/Helper/HelperProtocol.swift" "$ROOT/macos/Sources/ConnectionEvents.swift" \
+    "$ROOT/macos/Sources/ConnectionNotices.swift" "$ROOT/macos/tests/RecoveryNoticeTests.swift" \
+    -framework Cocoa -o "$ROOT/macos/build/tests/recovery-notice-tests"
+"$ROOT/macos/build/tests/recovery-notice-tests"

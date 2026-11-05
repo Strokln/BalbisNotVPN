@@ -145,20 +145,21 @@ struct DomainRules {
         }
         return domains.sorted()
     }
-    static func load(from directory: URL) throws -> DomainRules {
+    static func load(from directory: URL, baseDomains: [String]? = nil) throws -> DomainRules {
         let names = ["main", "youtube", "ai", "discord", "telegram", "whatsapp", "cloudflare", "second", "rkn"]
         var all: [String] = []
         for name in names {
             all += parse(try String(contentsOf: directory.appendingPathComponent(name + ".txt"), encoding: .utf8))
         }
-        return DomainRules(included: Array(Set(all)).sorted(), excluded: parse(try String(contentsOf: directory.appendingPathComponent("exclude.txt"), encoding: .utf8)))
+        return DomainRules(included: baseDomains.map { Array(Set($0)).sorted() } ?? Array(Set(all)).sorted(), excluded: parse(try String(contentsOf: directory.appendingPathComponent("exclude.txt"), encoding: .utf8)))
     }
-    func pac(port: UInt16, allSites: Bool, foreign: [String] = []) throws -> String {
+    func pac(port: UInt16, allSites: Bool, foreign: [String] = [], directDomains: [String] = [], useHTTPProxy: Bool? = nil) throws -> String {
         let allow = String(decoding: try JSONEncoder().encode(included), as: UTF8.self)
         let foreignJSON = String(decoding: try JSONEncoder().encode(foreign.sorted()), as: UTF8.self)
+        let directJSON = String(decoding: try JSONEncoder().encode(Array(Set(directDomains)).sorted()), as: UTF8.self)
         let bypass = String(decoding: try JSONEncoder().encode(excluded), as: UTF8.self)
         return """
-        var balbisDomains = \(allow), balbisExclude = \(bypass), balbisForeign = \(foreignJSON);
+        var balbisDomains = \(allow), balbisExclude = \(bypass), balbisForeign = \(foreignJSON), balbisDirect = \(directJSON);
         function balbisMatch(host, domains) {
             var parts = host.split('.');
             for (var i = 0; i < parts.length; i++) {
@@ -178,8 +179,9 @@ struct DomainRules {
                 host.indexOf(':') >= 0 || /^[0-9.]+$/.test(host)) return 'DIRECT';
             // CFNetwork on Ventura ignores SOCKS5 PAC entries. The foreign router
             // also accepts HTTP CONNECT for encrypted traffic on the same port.
-            var proxy = (\(foreign.isEmpty ? "false" : "true") && /^(https|wss):/i.test(url)
+            var proxy = (\((useHTTPProxy ?? !foreign.isEmpty) ? "true" : "false") && /^(https|wss):/i.test(url)
                 ? 'PROXY' : 'SOCKS5') + ' 127.0.0.1:\(port)';
+            if (balbisMatch(host, balbisDirect)) return 'DIRECT';
             if (balbisMatch(host, balbisForeign)) return proxy;
             if (balbisMatch(host, balbisExclude)) return 'DIRECT';
             if (\(allSites ? "true" : "false") || balbisMatch(host, balbisDomains)) return proxy;

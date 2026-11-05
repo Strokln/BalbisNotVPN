@@ -25,6 +25,7 @@ final class MockNetwork: NetworkSettings {
     }
     static func main() throws {
         try RecoveryTests.run()
+        try ExcludedSitesTests.run()
         let parsed = DomainRules.parse(" Example.COM\n# comment\nsub.example.com # comment\nfoo..bar\n-foo.com\nfoo-.com\na/evil\na'quote\n.example\nexample.com\n")
         require(parsed == ["example.com", "sub.example.com"], "domain normalization and untrusted list rejection")
         let rules = DomainRules(included: ["blocked.example", "example.com"], excluded: ["safe.example.com"])
@@ -43,6 +44,7 @@ final class MockNetwork: NetworkSettings {
         context.evaluateScript(try rules.pac(port: 1088, allSites: true))
         require(context.objectForKeyedSubscript("FindProxyForURL")!.call(withArguments: ["https://outside.example/", "outside.example"])!.toString() == "SOCKS5 127.0.0.1:1088", "all-sites mode")
         let resources = URL(fileURLWithPath: CommandLine.arguments[1])
+        try BuiltInSitesTests.run(resources: resources)
         let overseas = try foreignDomains(resources: resources, youtube: true)
         require(overseas.contains("youtube.com") && overseas.contains("sndcdn.com") && overseas.contains("openai.com"), "user foreign-route list bundled and normalized")
         let withoutVideo = try foreignDomains(resources: resources, youtube: false)

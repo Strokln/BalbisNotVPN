@@ -237,3 +237,123 @@ func TestHTTPRejectsUnsafeTargetsAndMethods(t *testing.T) {
 		a.Close()
 	}
 }
+
+func TestDirectExclusionPriorityAndPinnedDNS(t *testing.T) {
+	r := &router{domains: parseDomains("chatgpt.com"), directDomains: parseDomains("chatgpt.com"), active: map[net.Conn]bool{}}
+	defer r.closeAll()
+	for _, host := range []string{"chatgpt.com", "api.chatgpt.com"} {
+		if !matchesDomain(host, r.directDomains) {
+			t.Fatal("missing exclusion", host)
+		}
+	}
+	for _, host := range []string{"notchatgpt.com", "chatgpt.com.evil"} {
+		if matchesDomain(host, r.directDomains) {
+			t.Fatal("suffix impostor excluded", host)
+		}
+	}
+	var lookups, dials int
+	r.lookupIP = func(_ context.Context, host string) ([]net.IPAddr, error) {
+		lookups++
+		if host != "api.chatgpt.com" {
+			t.Fatal("wrong DNS host", host)
+		}
+		return []net.IPAddr{{IP: net.ParseIP("1.1.1.1")}}, nil
+	}
+	r.dial = func(_ context.Context, _, target string) (net.Conn, error) {
+		dials++
+		if target != "1.1.1.1:443" {
+			t.Fatal("not pinned to validated public IP", target)
+		}
+		a, b := net.Pipe()
+		b.Close()
+		return a, nil
+	}
+	conn, _, code := r.openTunnel("api.chatgpt.com", 443)
+	if code != 0 || conn == nil || lookups != 1 || dials != 1 {
+		t.Fatalf("direct route failed: %d lookups=%d dials=%d", code, lookups, dials)
+	}
+	r.remove(conn)
+}
+func TestDirectRejectsUnsafeDNSAndHasNoFallback(t *testing.T) {
+	r := &router{dpi: "127.0.0.1:1", foreign: "127.0.0.1:2", domains: parseDomains("example.com"), directDomains: parseDomains("example.com"), active: map[net.Conn]bool{}}
+	r.dial = func(context.Context, string, string) (net.Conn, error) {
+		t.Fatal("unsafe DNS must not dial any route")
+		return nil, io.EOF
+	}
+	for _, ip := range []string{"127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.0.1", "169.254.1.1", "100.64.0.1", "0.0.0.0", "224.0.0.1", "240.1.1.1", "::1", "::", "fc00::1", "fe80::1", "ff02::1", "::ffff:127.0.0.1", "2001:db8::1"} {
+		t.Run(ip, func(t *testing.T) {
+			r.lookupIP = func(context.Context, string) ([]net.IPAddr, error) {
+				return []net.IPAddr{{IP: net.ParseIP("1.1.1.1")}, {IP: net.ParseIP(ip)}}, nil
+			}
+			if _, _, code := r.openTunnel("example.com", 443); code != 2 {
+				t.Fatalf("accepted mixed unsafe DNS %s: %d", ip, code)
+			}
+		})
+	}
+	r.lookupIP = func(context.Context, string) ([]net.IPAddr, error) { return nil, io.EOF }
+	if _, _, code := r.openTunnel("example.com", 443); code != 4 {
+		t.Fatal("DNS failure must fail closed", code)
+	}
+	r.lookupIP = func(context.Context, string) ([]net.IPAddr, error) {
+		return []net.IPAddr{{IP: net.ParseIP("1.1.1.1")}}, nil
+	}
+	var dials int
+	r.dial = func(_ context.Context, _, target string) (net.Conn, error) {
+		dials++
+		if target != "1.1.1.1:443" {
+			t.Fatal("fell back to proxy", target)
+		}
+		return nil, io.EOF
+	}
+	if _, _, code := r.openTunnel("example.com", 443); code != 5 || dials != 1 {
+		t.Fatal("direct failure must not fall back", code, dials)
+	}
+	for _, ip := range []string{"1.1.1.1", "8.8.8.8", "2606:4700:4700::1111", "::ffff:8.8.8.8"} {
+		if !publicIP(net.ParseIP(ip)) {
+			t.Fatal("public address rejected", ip)
+		}
+	}
+}
+
+func TestEmptyForeignListUsesDPIWithoutDirectDial(t *testing.T) {
+	r := &router{dpi: "127.0.0.1:11001", foreign: "127.0.0.1:11002", domains: parseDomains(""), active: map[net.Conn]bool{}}
+	defer r.closeAll()
+	r.lookupIP = func(context.Context, string) ([]net.IPAddr, error) {
+		t.Fatal("non-excluded empty-list route must not resolve directly")
+		return nil, io.EOF
+	}
+	r.dial = func(_ context.Context, _, target string) (net.Conn, error) {
+		if target != r.dpi {
+			t.Fatal("empty foreign list must use DPI", target)
+		}
+		a, b := net.Pipe()
+		go func() {
+			defer b.Close()
+			greeting := make([]byte, 3)
+			if _, err := io.ReadFull(b, greeting); err != nil {
+				return
+			}
+			b.Write([]byte{5, 0})
+			header := make([]byte, 4)
+			if _, err := io.ReadFull(b, header); err != nil {
+				return
+			}
+			host, err := address(b, header[3])
+			if err != nil {
+				return
+			}
+			if host != "api.openai.com" {
+				t.Error("incorrect domain sent to DPI", host)
+			}
+			port := make([]byte, 2)
+			io.ReadFull(b, port)
+			reply(b, 0)
+		}()
+		return a, nil
+	}
+	conn, _, code := r.openTunnel("api.openai.com", 443)
+	if code != 0 || conn == nil {
+		t.Fatal("empty list failed DPI routing", code)
+	}
+	r.remove(conn)
+}

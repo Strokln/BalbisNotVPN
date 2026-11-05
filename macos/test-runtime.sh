@@ -9,7 +9,7 @@ mkdir -p "$ROOT/macos/build/tests"
 xcrun swiftc -target "$(uname -m)-apple-macos13.0" \
     -module-cache-path "$ROOT/macos/build/module-cache" \
     "$ROOT/macos/Sources/ProxyHelperClient.swift" "$ROOT/macos/Helper/HelperProtocol.swift" \
-    "$ROOT/macos/Sources/ConnectionEvents.swift" "$ROOT/macos/Sources/CustomSites.swift" "$ROOT/macos/Sources/Core.swift" "$ROOT/macos/Sources/PACServer.swift" "$ROOT/macos/Sources/Runtime.swift" "$ROOT/macos/Sources/ForeignTunnel.swift" \
+    "$ROOT/macos/Sources/BuiltInSites.swift" "$ROOT/macos/Sources/ExcludedSites.swift" "$ROOT/macos/Sources/ConnectionEvents.swift" "$ROOT/macos/Sources/CustomSites.swift" "$ROOT/macos/Sources/Core.swift" "$ROOT/macos/Sources/PACServer.swift" "$ROOT/macos/Sources/Runtime.swift" "$ROOT/macos/Sources/ForeignTunnel.swift" \
     "$ROOT/macos/tests/RuntimeTests.swift" -framework Network \
     -o "$ROOT/macos/build/tests/runtime-tests"
 # Keep the live installation and its recovery journal outside lifecycle tests.

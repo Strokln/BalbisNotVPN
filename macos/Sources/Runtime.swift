@@ -118,10 +118,12 @@ final class BalbisRuntime {
         let selectedPorts = ports.sorted()
         port = selectedPorts[0]
         let dpiPort = selectedPorts[1], httpPort = selectedPorts[2]
-        let domains = foreign.enabled ? Array(Set(try foreignDomains(resources: resources, youtube: foreign.youtube) + CustomSitesStore.load())).sorted() : []
+        let baseDomains = try BuiltInSitesStore.load()
+        let excludedDomains = try ExcludedSitesStore.load()
+        let domains = foreign.enabled ? Array(Set(try foreignDomains(resources: resources, youtube: foreign.youtube, baseDomains: baseDomains) + CustomSitesStore.load())).sorted() : []
         foreignHTTPPort = foreign.enabled ? httpPort : 0
-        let rules = try DomainRules.load(from: resources.appendingPathComponent("list"))
-        let server = PACServer(script: try rules.pac(port: port, allSites: mode == 2, foreign: domains))
+        let rules = try DomainRules.load(from: resources.appendingPathComponent("list"), baseDomains: baseDomains)
+        let server = PACServer(script: try rules.pac(port: port, allSites: mode == 2, foreign: domains, directDomains: excludedDomains, useHTTPProxy: foreign.enabled))
         try server.start()
         server.onFailure = { [weak self] in self?.onUnexpectedExit?() }
         pacServer = server
@@ -146,7 +148,11 @@ final class BalbisRuntime {
                         sessionDirectory = directory
                         let domainsFile = directory.appendingPathComponent("foreign.txt")
                         try domains.joined(separator: "\n").write(to: domainsFile, atomically: true, encoding: .utf8)
-                        let config = SessionConfig(resources: resources.path, dpiPort: dpiPort, socksPort: port, httpPort: httpPort, strategy: strategy.rawValue, sessionID: sessionID, region: region, domainsFile: domainsFile.path)
+                        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: domainsFile.path)
+                        let excludedFile = directory.appendingPathComponent("direct.txt")
+                        try excludedDomains.joined(separator: "\n").write(to: excludedFile, atomically: true, encoding: .utf8)
+                        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: excludedFile.path)
+                        let config = SessionConfig(resources: resources.path, dpiPort: dpiPort, socksPort: port, httpPort: httpPort, strategy: strategy.rawValue, sessionID: sessionID, region: region, domainsFile: domainsFile.path, excludedFile: excludedFile.path)
                         let file = directory.appendingPathComponent("session.json")
                         try JSONEncoder().encode(config).write(to: file, options: .atomic)
                         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
@@ -163,7 +169,7 @@ final class BalbisRuntime {
                     guard ready else { throw BalbisError("Не удалось дождаться готовности туннеля. Попробуйте другой регион.") }
                     if foreign.enabled {
                         onProgress?("Проверка зарубежного IP и маршрута нейросетей…")
-                        let probe = try ForeignProbe.verify(httpPort: httpPort, socksPort: port)
+                        let probe = try ForeignProbe.verify(httpPort: httpPort, socksPort: port, directDomains: excludedDomains, probeAPI: ForeignProbe.shouldProbeAPI(foreignDomains: domains, directDomains: excludedDomains))
                         foreignStatus = "Выход: \(probe.country) · OpenAI: \(probe.aiRegion == "ok" ? "регион доступен" : "требует проверки в браузере")"
                     }
                     guard process.isRunning && socksReady(port: port) else { throw BalbisError("Маршрутизатор остановился во время проверки.") }

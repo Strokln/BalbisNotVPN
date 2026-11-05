@@ -1,4 +1,5 @@
-// Balbis macOS routing helper. All listeners and upstream hops are loopback-only.
+// Balbis macOS routing helper. Listeners and proxy backends are loopback-only.
+// Explicit direct exclusions may connect only to verified public IP addresses.
 // It forwards TLS unchanged and makes route decisions from SOCKS domain names.
 package main
 
@@ -12,6 +13,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"os/signal"
 	"strconv"
@@ -22,12 +24,14 @@ import (
 )
 
 type router struct {
-	dpi, foreign string
-	domains      map[string]bool
-	dial         func(context.Context, string, string) (net.Conn, error)
-	mu           sync.Mutex
-	active       map[net.Conn]bool
-	closed       bool
+	dpi, foreign  string
+	domains       map[string]bool
+	directDomains map[string]bool
+	lookupIP      func(context.Context, string) ([]net.IPAddr, error)
+	dial          func(context.Context, string, string) (net.Conn, error)
+	mu            sync.Mutex
+	active        map[net.Conn]bool
+	closed        bool
 }
 
 func normalizeHost(host string) (string, error) {
@@ -60,12 +64,13 @@ func parseDomains(body string) map[string]bool {
 	}
 	return result
 }
-func (r *router) abroad(host string) bool {
+func (r *router) abroad(host string) bool { return matchesDomain(host, r.domains) }
+func matchesDomain(host string, domains map[string]bool) bool {
 	if net.ParseIP(host) != nil {
 		return false
 	}
 	for {
-		if r.domains[host] {
+		if domains[host] {
 			return true
 		}
 		pos := strings.IndexByte(host, '.')
@@ -299,6 +304,9 @@ func (r *router) openTunnel(host string, port uint16) (net.Conn, io.Reader, byte
 	if net.ParseIP(host) != nil {
 		return nil, nil, 8
 	}
+	if matchesDomain(host, r.directDomains) {
+		return r.openDirect(host, port)
+	}
 	foreign := r.abroad(host)
 	target := r.dpi
 	if foreign {
@@ -329,6 +337,63 @@ func (r *router) openTunnel(host string, port uint16) (net.Conn, io.Reader, byte
 		return nil, nil, 5
 	}
 	return upstream, incoming, 0
+}
+
+// publicIP rejects local, special-purpose and non-unicast answers. Dialing the
+// resulting numeric address (never the hostname) prevents a second DNS lookup.
+func publicIP(ip net.IP) bool {
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
+		return false
+	}
+	addr = addr.Unmap()
+	if !addr.IsGlobalUnicast() || addr.IsPrivate() || addr.IsLoopback() || addr.IsLinkLocalUnicast() {
+		return false
+	}
+	if addr.Is4() {
+		for _, prefix := range []string{"0.0.0.0/8", "100.64.0.0/10", "192.0.0.0/24", "192.0.2.0/24", "192.88.99.0/24", "198.18.0.0/15", "198.51.100.0/24", "203.0.113.0/24", "240.0.0.0/4"} {
+			if netip.MustParsePrefix(prefix).Contains(addr) {
+				return false
+			}
+		}
+		return true
+	}
+	// Only globally allocated IPv6 unicast; exclude protocol-assignment and
+	// documentation ranges, including translation/tunneling addresses.
+	return netip.MustParsePrefix("2000::/3").Contains(addr) &&
+		!netip.MustParsePrefix("2001::/23").Contains(addr) &&
+		!netip.MustParsePrefix("2001:db8::/32").Contains(addr) &&
+		!netip.MustParsePrefix("2002::/16").Contains(addr) &&
+		!netip.MustParsePrefix("3fff::/20").Contains(addr)
+}
+func (r *router) openDirect(host string, port uint16) (net.Conn, io.Reader, byte) {
+	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+	defer cancel()
+	lookup := r.lookupIP
+	if lookup == nil {
+		lookup = net.DefaultResolver.LookupIPAddr
+	}
+	addresses, err := lookup(ctx, host)
+	if err != nil || len(addresses) == 0 {
+		return nil, nil, 4
+	}
+	// Fail the entire mixed response rather than choosing around a private answer.
+	for _, address := range addresses {
+		if address.Zone != "" || !publicIP(address.IP) {
+			return nil, nil, 2
+		}
+	}
+	for _, address := range addresses {
+		conn, err := r.dial(ctx, "tcp", net.JoinHostPort(address.IP.String(), fmt.Sprint(port)))
+		if err != nil {
+			continue
+		}
+		if !r.add(conn) {
+			return nil, nil, 5
+		}
+		return conn, conn, 0
+	}
+	return nil, nil, 5
 }
 func (r *router) handleHTTP(client net.Conn, reader *bufio.Reader) {
 	fail := func(status int) {
@@ -423,6 +488,7 @@ func main() {
 	dpi := flag.String("dpi", "", "local DPI SOCKS5 backend")
 	foreign := flag.String("foreign", "", "local HTTP CONNECT tunnel backend")
 	domains := flag.String("domains", "", "foreign-route domain list")
+	directFile := flag.String("direct-domains", "", "optional explicit direct-route domain list")
 	flag.Parse()
 	for _, endpoint := range []string{*listen, *dpi, *foreign} {
 		if err := loopback(endpoint); err != nil {
@@ -436,12 +502,17 @@ func main() {
 		os.Exit(2)
 	}
 	rules := parseDomains(string(body))
-	if len(rules) == 0 {
-		fmt.Fprintln(os.Stderr, "empty foreign domain list")
-		os.Exit(2)
+	directRules := map[string]bool{}
+	if *directFile != "" {
+		body, err := os.ReadFile(*directFile)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "cannot read direct routing list")
+			os.Exit(2)
+		}
+		directRules = parseDomains(string(body))
 	}
 	dialer := &net.Dialer{Timeout: 12 * time.Second, KeepAlive: 30 * time.Second}
-	r := &router{dpi: *dpi, foreign: *foreign, domains: rules, dial: dialer.DialContext, active: map[net.Conn]bool{}}
+	r := &router{dpi: *dpi, foreign: *foreign, domains: rules, directDomains: directRules, dial: dialer.DialContext, active: map[net.Conn]bool{}}
 	listener, err := net.Listen("tcp4", *listen)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "cannot listen on SOCKS port")

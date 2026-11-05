@@ -4,6 +4,8 @@ import CoreServices
 import Network
 
 final class PanelModel: ObservableObject {
+    let notices = ConnectionNotices()
+    private var recoveryNoticePolicy = RecoveryNoticePolicy()
     @Published var automaticRecovery = UserDefaults.standard.object(forKey: "automaticRecovery") == nil || UserDefaults.standard.bool(forKey: "automaticRecovery")
     @Published var checkResult = ""
     @Published var checkingConnection = false
@@ -78,7 +80,7 @@ final class PanelModel: ObservableObject {
                 guard let self = self else { return }
                 if self.busy { self.pendingExit = true; return }
                 guard !self.runtime.isAlive else { return }
-                self.perform {
+                self.perform(recoveryOperation: true) {
                     try self.runtime.stop()
                 } completion: {
                     self.message = "Соединение прервалось."
@@ -132,13 +134,16 @@ final class PanelModel: ObservableObject {
         waitingForNetwork = false
     }
     func toggle() {
+        recoveryNoticePolicy.reset()
+        reconnectPolicy.reset()
+        notices.clear()
         reconnectPolicy.wanted = !connected && !waitingForNetwork
         retryTask?.cancel()
         retryTask = nil
         healthTask?.cancel()
         if waitingForNetwork {
             cancelStartupConnection()
-            return
+            if !connected { return }
         }
         ConnectionEvents.record(reconnectPolicy.wanted ? "user-connect" : "user-disconnect")
         changeConnection(automatically: false)
@@ -152,7 +157,7 @@ final class PanelModel: ObservableObject {
         let selectedStrategy = Strategy(rawValue: strategy) ?? .balanced
         let options = ForeignOptions(enabled: foreign, youtube: youtube, region: ["AUTO", "EU", "AM"][region])
         message = stopping ? "Завершаем подключение…" : "Подбираем доступное подключение…"
-        perform {
+        perform(recoveryOperation: true) {
             if stopping { try self.runtime.stop() }
             else {
                 if automatically {
@@ -172,14 +177,13 @@ final class PanelModel: ObservableObject {
         } completion: {
             self.message = ""
             self.checkResult = ""
-            self.reconnectPolicy.reset()
-            self.healthFailures.reset()
+            self.connectionRecovered()
             self.diagnostics = self.connected
                 ? "SOCKS5: 127.0.0.1:\(self.runtime.port)\nPAC: \(self.runtime.pacURL)\n\(self.runtime.foreignStatus)"
                 : ""
         }
     }
-    private func perform(_ operation: @escaping () throws -> Void, completion: @escaping () -> Void) {
+    private func perform(recoveryOperation: Bool = false, _ operation: @escaping () throws -> Void, completion: @escaping () -> Void) {
         guard !busy else { return }
         busy = true
         stateChanged?()
@@ -191,10 +195,18 @@ final class PanelModel: ObservableObject {
                 self.connected = self.runtime.isRunning
                 self.recoveryNeeded = FileManager.default.fileExists(atPath: journalURL.path)
                 if let error = failure {
+                    if error is UserFacingError && self.connected && self.runtime.isAlive {
+                        self.connectionRecovered()
+                    }
                     self.message = (error as? UserFacingError)?.message
                         ?? "Не удалось подключиться. Проверьте сеть или выберите другую страну в настройках."
                     self.diagnostics = error.localizedDescription
-                    if !(error is UserFacingError) { self.scheduleReconnect() }
+                    if recoveryOperation && !(error is UserFacingError) {
+                        if self.automaticRecovery && self.reconnectPolicy.wanted && self.notices.enabled && self.recoveryNoticePolicy.recordFailure() {
+                            self.notices.showProblem()
+                        }
+                        self.scheduleReconnect()
+                    }
                 } else { completion() }
                 self.stateChanged?()
                 if self.pendingExit {
@@ -252,6 +264,7 @@ final class PanelModel: ObservableObject {
                 guard !self.busy, self.connected, self.runtime.port == port else { return }
                 if !repair {
                     self.checkResult = failure == nil ? result : "Проверка не удалась. Подробности доступны в диагностике."
+                    if failure == nil { self.recoveryNoticePolicy.reset(); self.notices.clear() }
                 }
                 if let error = failure { self.diagnostics = error.localizedDescription }
                 if self.pendingExit {
@@ -295,13 +308,13 @@ final class PanelModel: ObservableObject {
         let selectedStrategy = Strategy(rawValue: strategy) ?? .balanced
         let options = ForeignOptions(enabled: foreign, youtube: youtube, region: ["AUTO", "EU", "AM"][region])
         message = "Восстанавливаем подключение…"
-        perform {
+        perform(recoveryOperation: true) {
             try self.runtime.stop()
             guard let resources = Bundle.main.resourceURL, let executable = Bundle.main.executablePath else { throw BalbisError("Повреждён пакет приложения.") }
             try self.runtime.start(strategy: selectedStrategy, mode: selectedMode, service: selectedService, resources: resources, executable: executable, foreign: options)
         } completion: {
             self.message = "Соединение восстановлено."
-            self.reconnectPolicy.reset()
+            self.connectionRecovered()
         }
     }
     func changeRegion(_ next: Int) {
@@ -317,7 +330,7 @@ final class PanelModel: ObservableObject {
         let video = youtube
         let useForeign = foreign
         message = "Меняем страну…"
-        perform {
+        perform(recoveryOperation: true) {
             guard let resources = Bundle.main.resourceURL, let executable = Bundle.main.executablePath else { throw BalbisError("Повреждён пакет приложения.") }
             try self.runtime.stop()
             do {
@@ -329,7 +342,23 @@ final class PanelModel: ObservableObject {
                 try self.runtime.start(strategy: selectedStrategy, mode: selectedMode, service: selectedService, resources: resources, executable: executable, foreign: ForeignOptions(enabled: useForeign, youtube: video, region: ["AUTO", "EU", "AM"][previous]))
                 throw UserFacingError(message: "Новая страна недоступна. Прежнее подключение восстановлено.", details: failure.localizedDescription)
             }
-        } completion: { self.message = "Страна изменена."; self.reconnectPolicy.reset() }
+        } completion: { self.message = "Страна изменена."; self.connectionRecovered() }
+    }
+    private func connectionRecovered() {
+        reconnectPolicy.reset()
+        healthFailures.reset()
+        recoveryNoticePolicy.reset()
+        notices.clear()
+    }
+    func retryNow() {
+        if busy { return }
+        if connected && runtime.isAlive { checkConnection(); return }
+        retryTask?.cancel()
+        retryTask = nil
+        cancelStartupConnection()
+        reconnectPolicy.wanted = true
+        reconnectPolicy.reset()
+        if connected { reconnect() } else { changeConnection(automatically: false) }
     }
     func prepareToQuit() {
         reconnectPolicy.wanted = false
@@ -553,7 +582,10 @@ struct BalbisPanel: View {
                     if !model.checkResult.isEmpty { Text(model.checkResult).font(.system(size: 11)).textSelection(.enabled) }
                     Toggle("Восстанавливать при обрыве", isOn: $model.automaticRecovery).toggleStyle(.switch).controlSize(.small)
                 }.modifier(GlassCard())
+                ConnectionNoticeSettingsView(notices: model.notices).modifier(GlassCard())
                 CustomSitesView().modifier(GlassCard())
+                ExcludedSitesView().modifier(GlassCard())
+                BuiltInSitesView().modifier(GlassCard())
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Подключение").font(.system(size: 13, weight: .semibold))
                     Picker("Страна", selection: Binding(get: { model.region }, set: { model.changeRegion($0) })) {
@@ -601,6 +633,14 @@ struct BalbisPanel: View {
                         Button("Удалить службу подключения", action: model.removeHelper)
                             .disabled(model.busy || model.connected || model.recoveryNeeded)
                         Button("Восстановить настройки", action: model.recover).disabled(model.busy || model.connected || !model.recoveryNeeded)
+                        DiagnosticReportView(snapshot: DiagnosticSnapshot(
+                            connected: model.connected,
+                            mode: ["Ручная настройка", "Избранное", "Все сайты"][max(0, min(2, model.mode))],
+                            region: ["AUTO", "EU", "AM"][model.region],
+                            automaticRecovery: model.automaticRecovery,
+                            strategy: String(model.strategy),
+                            foreignEnabled: model.foreign
+                        ))
                     }.padding(.top, 10)
                 }.font(.system(size: 12)).modifier(GlassCard())
                 Button("Открыть инструкцию", action: model.openHelp).buttonStyle(.link).font(.system(size: 12))
@@ -612,7 +652,7 @@ struct BalbisPanel: View {
             Text("Balbis by Strokin").font(.system(size: 10, weight: .medium)).foregroundStyle(.tertiary)
             Spacer()
             if model.settings {
-                Text("0.7.1").font(.system(size: 10)).foregroundStyle(.tertiary)
+                Text("0.8.0").font(.system(size: 10)).foregroundStyle(.tertiary)
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").font(.system(size: 12)) }
                     .buttonStyle(.plain).help("Завершить Balbis").disabled(model.busy)
             } else {
@@ -640,6 +680,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.animates = true
         model.stateChanged = { [weak self] in self?.updateStatus() }
         updateStatus()
+        model.notices.onRetry = { [weak self] in self?.showPanel(); self?.model.retryNow() }
+        model.notices.onSettings = { [weak self] in self?.model.settings = true; self?.showPanel() }
+        model.notices.configure()
         model.observeConnection()
         let event = NSAppleEventManager.shared().currentAppleEvent
         let loginLaunch = event?.eventID == kAEOpenApplication
@@ -647,7 +690,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if model.autoConnect { model.beginStartupConnection() }
         else if !loginLaunch { showPanel() }
     }
-    func applicationDidBecomeActive(_ notification: Notification) { model.refreshLoginItem() }
+    func applicationDidBecomeActive(_ notification: Notification) {
+        model.refreshLoginItem()
+        model.notices.refreshAuthorization()
+    }
     private func updateStatus() {
         let symbol = model.connected ? "shield.lefthalf.filled" : "shield"
         statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Balbis")

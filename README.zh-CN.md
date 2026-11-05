@@ -17,16 +17,16 @@ Balbis 帮助访问指定网站。点击菜单栏中的盾牌，连接后即可�
 
 **[最新版本与校验和](https://github.com/Strokln/BalbisNotVPN/releases/latest)**
 
-当前磁盘映像版本为 **0.7.1**。
+当前磁盘映像版本为 **0.8.0**。
 
 | 你的 Mac | 应下载的映像 |
 | --- | --- |
-| Apple Silicon | [Balbis-0.7.1-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/Balbis-0.7.1-macOS-arm64.dmg) |
-| Intel | [Balbis-0.7.1-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/Balbis-0.7.1-macOS-x86_64.dmg) |
+| Apple Silicon | [Balbis-0.8.0-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.0/Balbis-0.8.0-macOS-arm64.dmg) |
+| Intel | [Balbis-0.8.0-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.0/Balbis-0.8.0-macOS-x86_64.dmg) |
 
 要确认处理器，请打开 Apple 菜单 →“关于本机”。显示 Apple 芯片的机型使用 Apple Silicon 版本，显示 Intel 处理器的机型使用 Intel 版本。更多说明见 [Apple 官方支持](https://support.apple.com/en-us/116943)。
 
-每个 DMG 都包含 **Balbis.app** 和“**应用程序**”文件夹的链接。**[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/SHA256SUMS.txt)** 包含两个映像的校验和。
+每个 DMG 都包含 **Balbis.app** 和“**应用程序**”文件夹的链接。**[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.0/SHA256SUMS.txt)** 包含两个映像的校验和。
 
 <details>
 <summary>验证下载的映像</summary>
@@ -34,7 +34,7 @@ Balbis 帮助访问指定网站。点击菜单栏中的盾牌，连接后即可�
 将同一版本的 DMG 和 SHA256SUMS.txt 下载到同一个文件夹。在终端中进入该文件夹，例如对 Intel 版本执行以下命令。
 
 ```sh
-shasum -a 256 Balbis-0.7.1-macOS-x86_64.dmg
+shasum -a 256 Balbis-0.8.0-macOS-x86_64.dmg
 ```
 
 将输出的哈希值与 SHA256SUMS.txt 中对应文件的记录进行比较。Apple Silicon 版本请使用带 `arm64` 的文件名。如果下载了两个映像，可以一起验证。
@@ -77,6 +77,18 @@ shasum -a 256 -c SHA256SUMS.txt
 
 **«YouTube через Balbis»（通过 Balbis 访问 YouTube）** 控制 YouTube 的境外路由。关闭后仍会使用本地 TCP 处理。“我的网站”中的自定义域名优先于此选项。
 
+## 直接连接的例外域名
+
+在 **«Исключения»（例外）** 中添加需要直接访问的域名。请输入 `example.com`，不要包含网址协议或路径。规则覆盖子域名，优先于境外列表、“我的网站”和“所有网站”模式。更改将在下次连接时生效。
+
+例外规则适用于系统代理模式，以及开启境外连接时的手动模式路由器。如果手动配置的客户端仅使用本地 DPI 处理，请在该客户端中自行配置绕过规则。
+
+## 主网站列表
+
+**«Основной список сайтов»（主网站列表）** 可以编辑整个预置基础列表。每行填写一个域名，不要包含网址协议或路径，可以添加或删除域名。无效条目会被拒绝。可以保存空列表，也可以点击 **«Восстановить встроенный»（恢复内置列表）** 还原默认内容。
+
+保存的列表将在下次连接时替代“精选网站”的基础列表和内置境外基础列表。YouTube 开关仍会过滤其路由，“我的网站”仍单独补充，明确添加的例外规则保持最高优先级。
+
 ## 自动启动与连接恢复
 
 - **«Запускать вместе с macOS»（登录 macOS 时启动）** 会在登录后于后台打开 Balbis。如果需要确认，请点击 **«Открыть настройки macOS»（打开 macOS 设置）**，并允许登录时启动。
@@ -85,6 +97,12 @@ shasum -a 256 -c SHA256SUMS.txt
 - 重连失败后的等待时间依次为 **5、15、30 秒，此后为 60 秒**。点击 **«Отключить»（断开）** 或 **«Отменить»（取消）**，即可停止本次应用运行中的尝试。下次打开 Balbis 时，自动连接设置仍然有效。
 
 如果辅助服务尚未安装完成，请先手动连接一次。连接期间可以切换国家。如果新路由未能启动，Balbis 会尝试恢复之前的路由。
+
+## 故障通知
+
+**«Уведомлять о сбоях»（故障时通知）** 为可选功能，默认不开启。只有你主动打开此选项时，应用才会请求 macOS 通知权限。
+
+多次连接或恢复尝试失败后，Balbis 会为本次断线发送一次通知。自动重试仍按 **5、15、30 秒，此后为 60 秒** 的间隔继续。通知提供 **«Повторить»（重试）** 和 **«Открыть настройки»（打开设置）** 操作。成功恢复或手动断开会重置本次故障状态。只有发生新的故障时，才可能再次通知。
 
 ## 无法使用时
 
@@ -109,6 +127,12 @@ shasum -a 256 -c SHA256SUMS.txt
 
 </details>
 
+## 诊断报告
+
+在现有的 **«Диагностика»（诊断）** 区域内点击 **«Подготовить отчёт»（准备报告）**。预览会显示在设置面板的同一个诊断区域内，文本可以选择。检查内容后，点击 **«Сохранить отчёт…»（保存报告）**，在 macOS 保存对话框中选择 `.txt` 文件。应用不会自动上传报告。
+
+报告包含应用和 macOS 版本、架构、连接状态标记、仅通过文件检查的辅助服务安装状态，以及从最多 **16 KB** 的日志尾部提取的最多 **100 条近期结构化事件**。只包含已识别的事件格式。不包含 IP 地址、账户、用户主目录路径、域名列表、令牌或原始请求，也不包含原始引擎日志。
+
 ## 功能与限制
 
 - Balbis 使用代理和 TCP 处理。不支持系统 TUN 路由、UDP、QUIC 或语音通话。忽略系统代理的程序可能直接访问网络。
@@ -116,7 +140,7 @@ shasum -a 256 -c SHA256SUMS.txt
 - 最低系统要求为 **macOS 13**。已在 **macOS 13.7.8 Intel** 上测试运行。ARM64 版本已编译并检查架构和签名，尚未在真实 Apple Silicon 设备上运行验证。**macOS 27 尚未测试**。
 - 采用 **ad-hoc** 签名，目前未经 Apple 公证，也不提供自动更新。
 
-版本记录见 [Releases](https://github.com/Strokln/BalbisNotVPN/releases)。[0.7.1](https://github.com/Strokln/BalbisNotVPN/releases/tag/v0.7.1) 修复了错误显示正在重连的状态，以及后台检查失败的处理方式。
+版本记录见 [Releases](https://github.com/Strokln/BalbisNotVPN/releases)。[0.8.0](https://github.com/Strokln/BalbisNotVPN/releases/tag/v0.8.0) 新增主列表编辑器、直接连接例外、可选故障通知和本地诊断报告。0.7.1 修复了错误显示正在重连的状态，以及后台检查失败的处理方式。
 
 ## 完全卸载
 

@@ -11,22 +11,22 @@
 
 Balbis helps you open selected websites. Click the shield in the menu bar, connect, and continue working. The panel includes country selection, custom websites, launch at login, and connection recovery.
 
-The ready-to-use app runs without Homebrew, Python, Go, or drivers. The interface is currently in Russian. the translated READMEs explain the same actions.
+The ready-to-use app runs without Homebrew, Python, Go, or drivers. The interface is currently in Russian. The translated READMEs explain the same actions.
 
 ## Download
 
 **[Latest release and checksums](https://github.com/Strokln/BalbisNotVPN/releases/latest)**
 
-Current disk images are **0.7.1**.
+Current disk images are **0.8.0**.
 
 | Your Mac | Download |
 | --- | --- |
-| Apple Silicon | [Balbis-0.7.1-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/Balbis-0.7.1-macOS-arm64.dmg) |
-| Intel | [Balbis-0.7.1-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/Balbis-0.7.1-macOS-x86_64.dmg) |
+| Apple Silicon | [Balbis-0.8.0-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.0/Balbis-0.8.0-macOS-arm64.dmg) |
+| Intel | [Balbis-0.8.0-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.0/Balbis-0.8.0-macOS-x86_64.dmg) |
 
 To identify your processor, open the Apple menu → About This Mac. An Apple chip means Apple Silicon. An Intel processor means the Intel build. See [Apple's guide](https://support.apple.com/en-us/116943) for more information.
 
-Each DMG contains **Balbis.app** and an **Applications** shortcut. **[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/SHA256SUMS.txt)** contains the checksums for both images.
+Each DMG contains **Balbis.app** and an **Applications** shortcut. **[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.8.0/SHA256SUMS.txt)** contains the checksums for both images.
 
 <details>
 <summary>Verify a downloaded image</summary>
@@ -34,7 +34,7 @@ Each DMG contains **Balbis.app** and an **Applications** shortcut. **[SHA256SUMS
 Download the DMG and SHA256SUMS.txt from the same release into one folder. In Terminal, change to that folder and run the following command for Intel.
 
 ```sh
-shasum -a 256 Balbis-0.7.1-macOS-x86_64.dmg
+shasum -a 256 Balbis-0.8.0-macOS-x86_64.dmg
 ```
 
 Compare the hash with that file's entry in SHA256SUMS.txt. For Apple Silicon, use the filename containing `arm64`. If you downloaded both images, you can check them together.
@@ -77,6 +77,18 @@ The **overseas list** includes AI services, YouTube, and other selected services
 
 **«YouTube через Balbis»** controls YouTube's overseas route. Turning it off leaves local TCP processing enabled for YouTube. A custom domain in My sites takes priority.
 
+## Direct exclusions
+
+Add domains under **«Исключения»** (Exclusions) to connect to them directly. Enter `example.com` without a URL or path. Rules include subdomains and take priority over the overseas list, My sites, and All sites mode. Changes apply at the next connection.
+
+Exclusions work in system-proxy modes and in the manual-mode router when Overseas connection is enabled. If you use a manually configured client with only local DPI processing, configure bypass rules in that client.
+
+## Main website list
+
+**«Основной список сайтов»** (Main website list) lets you edit the entire bundled base list. Add or remove domains with one domain per line, without URLs or paths. Invalid entries are rejected. You can save an empty list or choose **«Восстановить встроенный»** (Restore bundled list) to return to the defaults.
+
+From the next connection, the saved list replaces both the base list for Selected sites and the built-in overseas base. The YouTube switch still filters its route, My sites is added separately, and explicit exclusions retain highest priority.
+
 ## Launch at login and recovery
 
 - **«Запускать вместе с macOS»** (Launch with macOS) opens Balbis in the background after login. If approval is needed, click **«Открыть настройки macOS»** and allow it in System Settings.
@@ -85,6 +97,12 @@ The **overseas list** includes AI services, YouTube, and other selected services
 - Failed reconnection attempts wait **5, 15, 30, then 60 seconds**. **«Отключить»** (Disconnect) or **«Отменить»** (Cancel) stops attempts for the current app session. The automatic-connection preference still applies the next time Balbis opens.
 
 If helper setup is unfinished, connect manually once. You can change the country while connected. If the new route fails to start, Balbis attempts to restore the previous one.
+
+## Failure notifications
+
+**«Уведомлять о сбоях»** (Notify about failures) is optional and off until you enable it. macOS permission is requested only when you explicitly turn it on.
+
+After several failed connection or recovery attempts, Balbis sends one notification for that outage. Automatic retries continue with the existing **5, 15, 30, then 60 second** delays. The notification offers **«Повторить»** (Retry) and **«Открыть настройки»** (Open settings). Successful recovery or a manual disconnect resets the outage episode. Further notices are possible only for a new episode.
 
 ## Troubleshooting
 
@@ -109,6 +127,12 @@ Enter the password in the macOS system dialog. Connections then use the installe
 
 </details>
 
+## Diagnostic report
+
+Inside **«Диагностика»** (Diagnostics), click **«Подготовить отчёт»** (Prepare report). The preview appears inside that existing Diagnostics section of the settings panel. Review the selectable text, then use **«Сохранить отчёт…»** (Save report) to choose a `.txt` file in the macOS save dialog. Nothing is uploaded automatically.
+
+The report contains the app and macOS versions, architecture, connection flags, a file-only helper installation check, and up to **100 recent structured events** from a bounded **16 KB** tail. Only recognized event formats are included. IP addresses, accounts, home paths, domain lists, tokens, and raw requests are excluded. Raw engine logs are not included.
+
 ## Scope and limitations
 
 - Balbis uses proxies and TCP processing. System-wide TUN routing, UDP, QUIC, and voice calls are unsupported. Apps that ignore system proxies may connect directly.
@@ -116,7 +140,7 @@ Enter the password in the macOS system dialog. Connections then use the installe
 - The minimum version is **macOS 13**. Runtime testing was performed on **macOS 13.7.8 Intel**. ARM64 builds have been checked for architecture and signature. Execution on physical Apple Silicon has not yet been tested. **macOS 27 has not been tested**.
 - Builds are **ad-hoc signed**. Apple notarization and automatic updates are not available yet.
 
-See [Releases](https://github.com/Strokln/BalbisNotVPN/releases) for the changelog. [0.7.1](https://github.com/Strokln/BalbisNotVPN/releases/tag/v0.7.1) fixes misleading reconnection states and handling of failed background checks.
+See [Releases](https://github.com/Strokln/BalbisNotVPN/releases) for the changelog. [0.8.0](https://github.com/Strokln/BalbisNotVPN/releases/tag/v0.8.0) adds a main-list editor, direct exclusions, optional failure notifications, and a local diagnostic report. Version 0.7.1 fixed misleading reconnection states and handling of failed background checks.
 
 ## Complete removal
 

@@ -15,11 +15,12 @@ struct SessionConfig: Codable {
     let sessionID: String
     let region: String
     let domainsFile: String
+    var excludedFile: String? = nil
 }
 
-func foreignDomains(resources: URL, youtube: Bool) throws -> [String] {
+func foreignDomains(resources: URL, youtube: Bool, baseDomains: [String]? = nil) throws -> [String] {
     let root = resources.appendingPathComponent("routing")
-    var rules = Set(DomainRules.parse(try String(contentsOf: root.appendingPathComponent("foreign.txt"), encoding: .utf8)))
+    var rules = Set(try baseDomains ?? DomainRules.parse(String(contentsOf: root.appendingPathComponent("foreign.txt"), encoding: .utf8)))
     if !youtube {
         let video = DomainRules.parse(try String(contentsOf: root.appendingPathComponent("youtube.txt"), encoding: .utf8))
         rules.subtract(video)
@@ -54,11 +55,21 @@ struct ForeignProbe {
         if status == 200 || status == 401 { return "ok" }
         return "unknown"
     }
-    static func verify(httpPort: UInt16, socksPort: UInt16) throws -> ForeignProbe {
+    static func shouldProbeAPI(foreignDomains: [String], directDomains: [String]) -> Bool {
+        let host = "api.openai.com"
+        func matches(_ domains: [String]) -> Bool { domains.contains { host == $0 || host.hasSuffix("." + $0) } }
+        return matches(foreignDomains) && !matches(directDomains)
+    }
+    static func verify(httpPort: UInt16, socksPort: UInt16, directDomains: [String] = [], probeAPI: Bool = true) throws -> ForeignProbe {
         // Both probes explicitly use Balbis's local listeners, independent of system VPN/proxies.
         let trace = try command("/usr/bin/curl", ["-q", "--proxy", "http://127.0.0.1:\(httpPort)", "--noproxy", "", "--connect-timeout", "5", "--max-time", "12", "--max-filesize", "65536", "--fail", "--silent", "--show-error", "https://www.cloudflare.com/cdn-cgi/trace"])
         guard trace.status == 0 else { throw BalbisError("Зарубежный туннель не передаёт HTTPS. Попробуйте другой регион. " + String(trace.output.prefix(200))) }
         let country = try parseTrace(trace.output)
+        // An explicit exclusion intentionally bypasses the foreign API route. Do not
+        // reject that session because a direct request has a different region.
+        if !probeAPI || directDomains.contains(where: { "api.openai.com" == $0 || "api.openai.com".hasSuffix("." + $0) }) {
+            return ForeignProbe(country: country, aiRegion: "unknown")
+        }
         // No API key, account cookies or user data are sent. 401 proves the API is reachable.
         let api = try command("/usr/bin/curl", ["-q", "--proxy", "socks5h://127.0.0.1:\(socksPort)", "--noproxy", "", "--connect-timeout", "5", "--max-time", "10", "--max-filesize", "65536", "--silent", "--show-error", "--write-out", "\n%{http_code}", "https://api.openai.com/v1/models"])
         let lines = api.output.components(separatedBy: .newlines)
@@ -120,8 +131,10 @@ func runTunnelSupervisor(config: SessionConfig) -> Int32 {
             "-proxy", "socks5://127.0.0.1:\(config.dpiPort)", "-server-selection", "fastest",
             "-server-selection-timeout", "15s", "-server-selection-test-url", "https://www.cloudflare.com/cdn-cgi/trace",
             "-server-selection-dl-limit", "4096", "-init-retries", "1", "-timeout", "10s", "-verbosity", "50"], quiet: true)
-        try launch("balbis-router", ["-listen", "127.0.0.1:\(config.socksPort)", "-dpi", "127.0.0.1:\(config.dpiPort)",
-            "-foreign", "127.0.0.1:\(config.httpPort)", "-domains", config.domainsFile])
+        var routerArguments = ["-listen", "127.0.0.1:\(config.socksPort)", "-dpi", "127.0.0.1:\(config.dpiPort)",
+            "-foreign", "127.0.0.1:\(config.httpPort)", "-domains", config.domainsFile]
+        if let excludedFile = config.excludedFile { routerArguments += ["-direct-domains", excludedFile] }
+        try launch("balbis-router", routerArguments)
         finished.wait()
     } catch { fputs("Не удалось запустить туннель: \(error.localizedDescription)\n", stderr) }
     signals.forEach { $0.cancel() }
