@@ -2,97 +2,164 @@
 
 <p align="center"><img src="macos/Resources/Balbis.png" width="112" alt="Balbis 图标"></p>
 <h1 align="center">BalbisNotVPN</h1>
-<p align="center">Balbis by Strokin · 适用于 macOS 13+ 的原生应用</p>
-
-Balbis 通过本地 TCP 处理或境外代理，帮助访问指定网站。菜单栏面板提供连接、模式和地区选择、自定义域名、登录时启动及设置恢复功能。
-
+<p align="center">Balbis by Strokin · 在 macOS 面板中连接 AI 服务、YouTube 和其他网站</p>
 <p align="center">
 <img alt="macOS 13+" src="https://img.shields.io/badge/macOS-13%2B-1c2436">
-<img alt="Intel 与 Apple Silicon" src="https://img.shields.io/badge/Intel_%26_Apple_Silicon-Universal-598bd9">
+<img alt="Apple Silicon 与 Intel" src="https://img.shields.io/badge/CPU-Apple_Silicon_%7C_Intel-598bd9">
 <img alt="MIT 许可证" src="https://img.shields.io/badge/license-MIT-8ac9af">
 </p>
 
-这是一个独立的 macOS 项目。运行已编译的应用无需安装 Homebrew、Python、Go、驱动程序或其他 VPN 客户端。
+Balbis 帮助访问指定网站。点击菜单栏中的盾牌，连接后即可继续使用。面板提供国家选择、自定义网站、登录时启动和连接恢复功能。
 
-## 下载 0.7.1
+运行已编译的应用无需 Homebrew、Python、Go 或驱动程序。界面目前为俄语，各语言 README 说明的操作相同。下文保留俄语界面名称，并附中文解释。
 
-- [Apple Silicon — Balbis-0.7.1-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/Balbis-0.7.1-macOS-arm64.dmg)
-- [Intel — Balbis-0.7.1-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/Balbis-0.7.1-macOS-x86_64.dmg)
+## 下载
 
-请选择与处理器匹配的版本。每个磁盘映像都包含应用及“应用程序”文件夹的链接。
+**[最新版本与校验和](https://github.com/Strokln/BalbisNotVPN/releases/latest)**
+
+当前磁盘映像版本为 **0.7.1**。
+
+| 你的 Mac | 应下载的映像 |
+| --- | --- |
+| Apple Silicon | [Balbis-0.7.1-macOS-arm64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/Balbis-0.7.1-macOS-arm64.dmg) |
+| Intel | [Balbis-0.7.1-macOS-x86_64.dmg](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/Balbis-0.7.1-macOS-x86_64.dmg) |
+
+要确认处理器，请打开 Apple 菜单 →“关于本机”。显示 Apple 芯片的机型使用 Apple Silicon 版本，显示 Intel 处理器的机型使用 Intel 版本。更多说明见 [Apple 官方支持](https://support.apple.com/en-us/116943)。
+
+每个 DMG 都包含 **Balbis.app** 和“**应用程序**”文件夹的链接。**[SHA256SUMS.txt](https://github.com/Strokln/BalbisNotVPN/releases/download/v0.7.1/SHA256SUMS.txt)** 包含两个映像的校验和。
+
+<details>
+<summary>验证下载的映像</summary>
+
+将同一版本的 DMG 和 SHA256SUMS.txt 下载到同一个文件夹。在终端中进入该文件夹，例如对 Intel 版本执行以下命令。
+
+```sh
+shasum -a 256 Balbis-0.7.1-macOS-x86_64.dmg
+```
+
+将输出的哈希值与 SHA256SUMS.txt 中对应文件的记录进行比较。Apple Silicon 版本请使用带 `arm64` 的文件名。如果下载了两个映像，可以一起验证。
+
+```sh
+shasum -a 256 -c SHA256SUMS.txt
+```
+
+</details>
 
 ## 界面
 
-<p align="center"><img src="docs/panel.png" width="320" alt="Balbis 面板"></p>
+<p align="center"><img src="docs/panel.png" width="320" alt="菜单栏中的 Balbis 面板"></p>
 
-上图为原生面板的渲染图。设置在同一个弹出窗口内打开。**应用界面目前为俄语**；下文保留俄语菜单名称，并附中文说明。
+上图为原生面板的渲染图。设置在同一个弹出窗口中打开。点击面板外部会关闭面板，但不会断开连接。
 
-## 0.7.1 修复内容
+## 快速开始
 
-- 后台检查不再显示为正在重新连接。
-- 单次请求失败或网站返回 403/429/5xx，不再触发整个隧道重启。
-- 增加了多个地址的检查，以及连续传输错误的触发阈值。
-- 只有当前会话确实存在故障时，才会处理过期的进程退出事件。
-- 诊断页面新增重新连接原因日志。
+1. 打开对应的 DMG，将 **Balbis.app** 拖入“**应用程序**”文件夹，并从那里启动。
+2. 点击菜单栏中的盾牌，选择 **«Избранное»（精选网站）**。
+3. 在设置中保持 **«Зарубежное подключение»（境外连接）开启**，国家保持 **«Автоматически»（自动）**。
+4. 点击 **«Подключить»（连接）**。首次系统连接时，输入管理员密码确认安装辅助服务。等待状态变为 **«Подключено»（已连接）**。
+5. 打开所需网站。如果无法访问，请使用 **«Настройки → Проверить подключение»（设置 → 检查连接）**，并参阅下方的排障说明。
 
-## 安装与连接
+首次连接请使用这些默认选项。连接处理方式和网络服务可在 **«Дополнительно»（高级）** 中选择。如果 Balbis 选中了其他网络服务，请改为你正在使用的网络。
 
-1. 打开 DMG，将 **Balbis.app** 拖入“应用程序”文件夹。
-2. 从该文件夹启动 Balbis。如果 macOS 阻止启动，可使用右键菜单中的“打开”，或前往系统设置的“隐私与安全性”允许启动。应用采用本地 ad-hoc 签名，未经 Apple 公证。
-3. 选择所需模式、网络服务，并按需启用境外出口。点击 **«Подключить»（连接）**。
+如果 macOS 阻止启动下载的应用，请在系统设置的“隐私与安全性”中单独允许 Balbis 运行。应用采用本地 ad-hoc 签名，目前未经 Apple 公证。
 
-首次系统连接需要管理员密码，以安装功能受限的辅助服务。后续连接使用该服务。它仅能检查就绪状态、启用 Balbis 本地 PAC，以及恢复先前设置，不能执行任意命令。服务仅授权一个用户账户使用。重新安装或更换用户时，可能需要再次授权。
+## 连接模式
 
-如果其他应用或 VPN 已在管理代理设置，请先断开其连接。在本地模式下，需要自行将应用配置为使用 Balbis 代理；系统 PAC 不会改变。
+| 模式 | Balbis 处理哪些网站 | 哪些网站使用境外出口 |
+| --- | --- | --- |
+| **«Избранное»（精选网站）** | Balbis 列表和 «Мои сайты»（我的网站）中的域名 | 开启境外连接时，境外列表和自定义域名使用境外出口 |
+| **«Все сайты»（所有网站）** | 遵循系统代理设置的应用所访问的域名 | 同一份境外列表和自定义域名 |
+| **«Ручная настройка»（手动配置）** | 你已手动填入诊断页面所示本地 SOCKS 地址的应用 | 开启境外连接时使用同一列表。系统代理设置保持不变 |
 
-## 设置
+在“所有网站”模式中，其余域名通过本地 TCP 处理，出口国家不会改变。在“精选网站”模式中，其余网站直接访问。本地地址和以 IP 地址发起的请求另有路由限制。
 
-- **«Зарубежное подключение»（境外出口）**：通过 Opera/SurfEasy 的共享服务转发指定域名。可在设置中选择地区；实际可用性取决于该服务。
-- **«Мои сайты»（我的网站）**：补充境外路由列表。请输入域名，不要包含 `https://` 或路径；规则也适用于子域名。更改将在下次连接时生效。使用境外路由前，必须启用境外出口。
-- **YouTube**：可单独决定是否通过境外路由访问。
-- **«Запускать вместе с macOS»（登录 macOS 时启动）**：登录后打开应用。**«Подключаться автоматически»（自动连接）**：网络可用后，使用已保存的设置开始连接。如需登录后自动连接，请同时开启这两个选项。如果 macOS 要求确认，请在系统设置中允许登录时启动。
-- **«Восстановить настройки»（恢复设置）**：恢复未正常结束的会话所修改的设置。如果应用提示存在遗留日志，请先执行恢复。
-- **«Удалить службу подключения»（移除连接服务）**：位于诊断页面，需要管理员授权。请先断开 Balbis 并恢复遗留设置。
+**境外列表**包含 AI 服务、YouTube 和其他指定服务。可查看 [foreign.txt](macos/routing/foreign.txt)，并通过 **«Мои сайты»（我的网站）** 补充。规则也适用于子域名。请输入 `example.com`，不要包含 `https://` 或路径。更改将在下次连接时生效。
+
+**«YouTube через Balbis»（通过 Balbis 访问 YouTube）** 控制 YouTube 的境外路由。关闭后仍会使用本地 TCP 处理。“我的网站”中的自定义域名优先于此选项。
+
+## 自动启动与连接恢复
+
+- **«Запускать вместе с macOS»（登录 macOS 时启动）** 会在登录后于后台打开 Balbis。如果需要确认，请点击 **«Открыть настройки macOS»（打开 macOS 设置）**，并允许登录时启动。
+- **«Подключаться автоматически»（自动连接）** 会在打开 Balbis 后等待网络可用，再使用已保存的参数连接。如需登录后自动连接，请同时开启两个选项。
+- **«Восстанавливать при обрыве»（断线后恢复）默认开启**。Balbis 会在睡眠唤醒后、网络变化后，以及运行期间定期检查路由。只有连续三次传输错误才会触发路由重启，网站返回 403/429/5xx 本身不会触发。连接引擎退出时也会启动恢复。
+- 重连失败后的等待时间依次为 **5、15、30 秒，此后为 60 秒**。点击 **«Отключить»（断开）** 或 **«Отменить»（取消）**，即可停止本次应用运行中的尝试。下次打开 Balbis 时，自动连接设置仍然有效。
+
+如果辅助服务尚未安装完成，请先手动连接一次。连接期间可以切换国家。如果新路由未能启动，Balbis 会尝试恢复之前的路由。
+
+## 无法使用时
+
+| 现象 | 建议操作 |
+| --- | --- |
+| macOS 阻止启动 | 将应用移到“应用程序”文件夹，并在“隐私与安全性”中允许 Balbis 运行 |
+| Balbis 提示存在其他 VPN 或代理被占用 | 确认哪个程序正在管理连接。使用 Balbis 系统连接前，先断开它的连接。如需同时使用，可采用手动配置模式 |
+| 显示 «Подключено»（已连接），但网站打不开 | 运行 «Проверить подключение»（检查连接）。如果境外出口受限，请尝试其他国家 |
+| 网站返回 403 或要求验证 | 网站可能限制共享境外 IP。请尝试其他地区，并单独检查该网站 |
+| 存在上次会话遗留的设置 | 打开 «Настройки → Диагностика → Восстановить настройки»（设置 → 诊断 → 恢复设置） |
+| Balbis 频繁重新连接 | 打开 «Настройки → Диагностика → Причины переподключений»（设置 → 诊断 → 重连原因）。如需暂时停止尝试，请关闭 «Восстанавливать при обрыве»（断线后恢复） |
+| 登录 macOS 后没有自动连接 | 检查两个自动启动相关选项、macOS 的授权，并先手动完成首次连接 |
+
+如果问题反复出现，请[提交 Issue](https://github.com/Strokln/BalbisNotVPN/issues/new/choose)。请提供 Balbis 版本、macOS 版本、处理器及复现步骤。如遇断线，请附上重连原因日志，并先删除其中的个人信息。
+
+<details>
+<summary>为什么需要管理员密码</summary>
+
+首次系统连接会安装一个功能受限的辅助服务。它由 launchd 运行，仅供一个已授权账户使用，只能检查就绪状态、启用 Balbis 本地 PAC，以及恢复由它保存的设置。服务不能执行任意命令。
+
+密码在 macOS 的系统对话框中输入。安装完成后，连接操作会使用该辅助服务。重新安装或更换用户时，可能需要再次授权。可从诊断页面移除服务。
+
+</details>
 
 ## 功能与限制
 
-Balbis 使用本地 SOCKS/HTTP 代理和系统 PAC。不提供系统级 TUN 路由，也不支持 UDP、QUIC 或语音通话。忽略系统代理的程序可能直接访问网络。**«Все сайты»（所有网站）** 模式只适用于使用所选代理的应用，并不覆盖电脑的全部流量。
+- Balbis 使用代理和 TCP 处理。不支持系统 TUN 路由、UDP、QUIC 或语音通话。忽略系统代理的程序可能直接访问网络。
+- Opera/SurfEasy 的共享境外出口可能速度较慢或无法使用。能否访问某个网站或账户取决于该服务的限制。OpenAI API 有响应，并不能证明已登录的 ChatGPT 会话可用。
+- 最低系统要求为 **macOS 13**。已在 **macOS 13.7.8 Intel** 上测试运行。ARM64 版本已编译并检查架构和签名，尚未在真实 Apple Silicon 设备上运行验证。**macOS 27 尚未测试**。
+- 采用 **ad-hoc** 签名，目前未经 Apple 公证，也不提供自动更新。
 
-共享境外出口可能速度较慢或无法使用。网站可能拒绝共享 IP、要求验证，或返回 HTTP 403。出口检查成功不代表所有页面和账户都能访问。TCP 处理策略也不能保证绕过某一种封锁。
+版本记录见 [Releases](https://github.com/Strokln/BalbisNotVPN/releases)。[0.7.1](https://github.com/Strokln/BalbisNotVPN/releases/tag/v0.7.1) 修复了错误显示正在重连的状态，以及后台检查失败的处理方式。
 
-已在 **macOS 13 Ventura、Intel** 上进行运行测试。Apple Silicon 版本已编译，但尚未在真实设备上验证。**macOS 27 尚未测试**。发行版采用 ad-hoc 签名，未经 Apple 公证，且不提供自动更新。
+## 完全卸载
 
-## 从源码构建
+1. 断开 Balbis。如果应用提示存在未结束的会话，请先从诊断页面恢复设置。
+2. 关闭 **«Запускать вместе с macOS»（登录 macOS 时启动）** 和 **«Подключаться автоматически»（自动连接）**。
+3. 在 **«Настройки → Диагностика»（设置 → 诊断）** 中点击 **«Удалить службу подключения»（移除连接服务）**，并确认 macOS 的授权请求。
+4. 点击设置底部的电源按钮退出 Balbis，再将“应用程序”中的应用移到废纸篓。
+5. 如需删除自定义域名和日志，请在退出应用后将 `~/Library/Application Support/Balbis macOS` 文件夹移到废纸篓。
+
+要删除已保存的开关和参数，请在退出应用后执行以下命令。
+
+```sh
+defaults delete local.balbis.macos
+```
+
+如果该偏好设置域已经不存在，命令会显示相应提示。移除应用和辅助服务并不要求删除这些数据。
+
+## 构建与测试
 
 需要 macOS 和 Apple Command Line Tools（`xcode-select --install`）。
 
 ```sh
 ./macos/build.sh universal
-# 或仅构建所需架构：
+# 或仅构建一种架构
 ./macos/build.sh x86_64
 ./macos/build.sh arm64
 ```
 
-构建会生成 `macos/build/Balbis.app` 和 ZIP 文件。要从 universal 压缩包生成 DMG：
+构建会生成 `macos/build/Balbis.app` 和 ZIP 文件。要生成各架构的 DMG，请使用 universal 压缩包。
 
 ```sh
 ./macos/package-dmg.sh arm64
 ./macos/package-dmg.sh x86_64
 ```
 
-脚本使用随附源码构建 tpws。通过 SHA-256 校验的 opera-proxy 二进制文件，以及路由器所需的 Go（如有需要），会下载至项目本地文件夹。首次构建需要联网，无需全局安装 Go/Homebrew。下载的工具和构建产物不包含在仓库中。
+脚本使用随附源码构建 tpws，并将通过 SHA-256 校验的 opera-proxy 二进制文件及所需的 Go 下载到项目本地文件夹。首次构建需要联网，无需全局安装 Go/Homebrew。
 
-使用 `./macos/test.sh` 和 `./macos/test-runtime.sh` 运行测试。这些测试使用本地测试服务器，并通过隔离的设置验证生命周期。真实境外出口需要另行手动检查。
+使用 `./macos/test.sh` 和 `./macos/test-runtime.sh` 运行测试。这些测试使用本地测试服务器，并通过隔离的设置验证生命周期。真实境外出口需要另行检查。参与说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-## 源码与许可证
+## 许可证
 
-Balbis 代码采用 [MIT 许可证，© 2026 Strokin](LICENSE)。初始域名列表来自用户提供的清单。
+Balbis 原生代码采用 [MIT 许可证，© 2026 Strokin](LICENSE)。初始域名列表来自用户提供的清单。
 
-第三方组件保留各自的许可证和作者署名：
+第三方组件保留各自的许可证和作者署名，包括 [tpws / zapret](macos/engine/THIRD_PARTY_NOTICES.md)、[epoll-shim](macos/engine/EPOLL-SHIM-LICENSE)、[opera-proxy 及依赖](macos/tunnel/THIRD_PARTY_NOTICES.md)和[完整许可证文本](macos/tunnel/licenses)。详情见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-- **tpws / zapret**，MIT：[源码与固定版本](macos/engine/README.md)、[声明](macos/engine/THIRD_PARTY_NOTICES.md)。
-- **epoll-shim** 及随附头文件：[许可证](macos/engine/EPOLL-SHIM-LICENSE)，源码中保留相关声明。
-- **opera-proxy 1.31.0**，MIT：[源码与说明](macos/tunnel/README.md)、[许可证](macos/tunnel/LICENSE)、[声明与依赖](macos/tunnel/THIRD_PARTY_NOTICES.md)、[完整许可证文本](macos/tunnel/licenses)。
-- **Go 运行时及依赖**：上述文件中保留 BSD/MIT/Apache 及其他适用声明。
-
-本项目与 Opera、SurfEasy 无关联，也不由其支持。其公共服务有独立的使用条款和可用性限制。
+Balbis 与 Opera、SurfEasy 无关联，也不由其支持。其公共服务有独立的使用条款和可用性限制。
