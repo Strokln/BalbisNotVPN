@@ -41,6 +41,8 @@ struct BuiltInSitesTests {
         precondition(!ForeignProbe.shouldProbeAPI(foreignDomains: ["notopenai.com", "openai.com.evil"], directDomains: []))
         let filtered = try foreignDomains(resources: resources, youtube: false, baseDomains: ["youtube.com", "openai.com"])
         precondition(filtered == ["openai.com"], "YouTube toggle still filters overridden foreign list")
+        let videoSubdomains = try foreignDomains(resources: resources, youtube: false, baseDomains: ["www.youtube.com", "a.b.googlevideo.com", "notyoutube.com", "youtube.com.example", "openai.com"])
+        precondition(videoSubdomains == ["notyoutube.com", "openai.com", "youtube.com.example"], "YouTube subdomains must be filtered without matching unrelated suffixes")
         let context = JSContext()!
         context.evaluateScript("function isPlainHostName(h) { return h.indexOf('.') < 0; }")
         context.evaluateScript(try edited.pac(port: 1088, allSites: false, foreign: abroad, useHTTPProxy: true))

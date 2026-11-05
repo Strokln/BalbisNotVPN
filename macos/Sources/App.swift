@@ -410,6 +410,30 @@ private struct GlassCard: ViewModifier {
     }
 }
 
+// A narrow material veil softens the scroll viewport while leaving controls above it clickable.
+private struct GlassScrollEdges: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .bottom) {
+                if !reduceTransparency {
+                    Rectangle().fill(.ultraThinMaterial)
+                        .frame(height: 28)
+                        .mask(LinearGradient(colors: [.clear, .white.opacity(0.85)], startPoint: .top, endPoint: .bottom))
+                        .allowsHitTesting(false)
+                }
+            }
+            .mask {
+                VStack(spacing: 0) {
+                    LinearGradient(colors: [.clear, .white], startPoint: .top, endPoint: .bottom).frame(height: 10)
+                    Color.white
+                    LinearGradient(colors: [.white, .clear], startPoint: .top, endPoint: .bottom).frame(height: 22)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
 struct BalbisPanel: View {
     @ObservedObject var model: PanelModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -423,7 +447,8 @@ struct BalbisPanel: View {
             if model.settings {
                 settingsPage
             } else {
-                ScrollView { homePage.padding(.bottom, 2) }.scrollIndicators(.hidden)
+                ScrollView { homePage.padding(.top, 10).padding(.bottom, 24) }
+                    .scrollIndicators(.hidden).modifier(GlassScrollEdges())
             }
             Spacer(minLength: 0)
             footer
@@ -644,15 +669,15 @@ struct BalbisPanel: View {
                     }.padding(.top, 10)
                 }.font(.system(size: 12)).modifier(GlassCard())
                 Button("Открыть инструкцию", action: model.openHelp).buttonStyle(.link).font(.system(size: 12))
-            }
-        }.frame(maxHeight: .infinity)
+            }.padding(.top, 10).padding(.bottom, 24)
+        }.frame(maxHeight: .infinity).modifier(GlassScrollEdges())
     }
     private var footer: some View {
         HStack {
             Text("Balbis by Strokin").font(.system(size: 10, weight: .medium)).foregroundStyle(.tertiary)
             Spacer()
             if model.settings {
-                Text("0.8.0").font(.system(size: 10)).foregroundStyle(.tertiary)
+                Text("0.8.1").font(.system(size: 10)).foregroundStyle(.tertiary)
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").font(.system(size: 12)) }
                     .buttonStyle(.plain).help("Завершить Balbis").disabled(model.busy)
             } else {

@@ -15,10 +15,13 @@ struct RecoveryTests {
         defer { try? FileManager.default.removeItem(at: folder) }
         let file = folder.appendingPathComponent("sites.json")
         let store = CustomSitesStore(file: file)
-        for bad in ["https://example.com", "example.com/path", "127.0.0.1", "foo..com", "test.local"] {
+        for bad in ["https://example.com", "example.com/path", "127.0.0.1", "foo..com", "test.local", "com", "localhost", "ru"] {
             store.add(bad)
             precondition(store.domains.isEmpty && !store.error.isEmpty)
         }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try JSONEncoder().encode(["com", "localhost", "127.0.0.1", "test.local", "safe.example"]).write(to: file)
+        precondition(CustomSitesStore(file: file).domains == ["safe.example"], "Old broad or local entries must not reload")
         store.add("EXAMPLE.COM")
         store.add("example.com")
         precondition(store.domains == ["example.com"])

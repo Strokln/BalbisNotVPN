@@ -8,13 +8,13 @@ final class CustomSitesStore: ObservableObject {
         self.file = file
         do {
             if FileManager.default.fileExists(atPath: file.path) {
-                domains = try JSONDecoder().decode([String].self, from: Data(contentsOf: file))
+                domains = try Self.read(file: file)
             }
         } catch { self.error = "Не удалось прочитать список сайтов." }
     }
     func add(_ input: String) {
         let domain = input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard DomainRules.parse(domain) == [domain], !domain.contains("#"),
+        guard DomainRules.parse(domain) == [domain], domain.contains("."), !domain.contains("#"),
               domain.range(of: "^[0-9.]+$", options: .regularExpression) == nil,
               !domain.hasSuffix(".local") else {
             error = "Введите домен, например example.com, без ссылки и пути."
@@ -35,7 +35,14 @@ final class CustomSitesStore: ObservableObject {
     static func load() throws -> [String] {
         let file = supportDirectory.appendingPathComponent("custom-sites.json")
         guard FileManager.default.fileExists(atPath: file.path) else { return [] }
-        return DomainRules.parse(try JSONDecoder().decode([String].self, from: Data(contentsOf: file)).joined(separator: "\n"))
+        return try read(file: file)
+    }
+    private static func read(file: URL) throws -> [String] {
+        let values = try JSONDecoder().decode([String].self, from: Data(contentsOf: file))
+        return DomainRules.parse(values.joined(separator: "\n")).filter {
+            $0.contains(".") && !$0.hasSuffix(".local") &&
+            $0.range(of: "^[0-9.]+$", options: .regularExpression) == nil
+        }
     }
 }
 

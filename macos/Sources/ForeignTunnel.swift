@@ -23,7 +23,9 @@ func foreignDomains(resources: URL, youtube: Bool, baseDomains: [String]? = nil)
     var rules = Set(try baseDomains ?? DomainRules.parse(String(contentsOf: root.appendingPathComponent("foreign.txt"), encoding: .utf8)))
     if !youtube {
         let video = DomainRules.parse(try String(contentsOf: root.appendingPathComponent("youtube.txt"), encoding: .utf8))
-        rules.subtract(video)
+        rules = Set(rules.filter { host in
+            !video.contains { host == $0 || host.hasSuffix("." + $0) }
+        })
     }
     return rules.sorted()
 }
